@@ -2401,66 +2401,89 @@ function useToast() {
 __turbopack_context__.s([
     "addToReorderList",
     ()=>addToReorderList,
+    "addTransferRequest",
+    ()=>addTransferRequest,
     "downloadCSV",
     ()=>downloadCSV,
+    "emitTransferUpdated",
+    ()=>emitTransferUpdated,
     "getReorderList",
     ()=>getReorderList,
     "getTransferRequests",
     ()=>getTransferRequests,
-    "removeFromReorderList",
-    ()=>removeFromReorderList,
-    "saveTransferRequest",
-    ()=>saveTransferRequest
+    "subscribeTransferRequests",
+    ()=>subscribeTransferRequests,
+    "updateTransferRequestStatus",
+    ()=>updateTransferRequestStatus
 ]);
-const getTransferRequests = ()=>{
+const TRANSFER_REQUESTS_KEY = "dms_transfer_requests";
+const REORDER_LIST_KEY = "dms_reorder_list";
+function getTransferRequests() {
     if ("TURBOPACK compile-time truthy", 1) return [];
     //TURBOPACK unreachable
     ;
-    const stored = undefined;
-};
-const saveTransferRequest = (request)=>{
-    if ("TURBOPACK compile-time truthy", 1) return;
+}
+function addTransferRequest(req) {
+    const requests = getTransferRequests();
+    requests.unshift(req); // Add to top
+    if ("TURBOPACK compile-time falsy", 0) //TURBOPACK unreachable
+    ;
+    return requests;
+}
+function updateTransferRequestStatus(id, status) {
+    const requests = getTransferRequests();
+    const updated = requests.map((req)=>req.id === id ? {
+            ...req,
+            status
+        } : req);
+    if ("TURBOPACK compile-time falsy", 0) //TURBOPACK unreachable
+    ;
+    return updated;
+}
+function emitTransferUpdated() {
+    if ("TURBOPACK compile-time falsy", 0) //TURBOPACK unreachable
+    ;
+}
+function subscribeTransferRequests(listener) {
+    if ("TURBOPACK compile-time truthy", 1) return ()=>{};
     //TURBOPACK unreachable
     ;
-    const existing = undefined;
-};
-const getReorderList = ()=>{
+    const handleStorage = undefined;
+    const handleCustom = undefined;
+}
+function getReorderList() {
     if ("TURBOPACK compile-time truthy", 1) return [];
     //TURBOPACK unreachable
     ;
-    const stored = undefined;
-};
-const addToReorderList = (item)=>{
+}
+function addToReorderList(item) {
+    const list = getReorderList();
+    // Prevent duplicates (same medicine + batch)
+    const existingIndex = list.findIndex((existing)=>existing.medicine === item.medicine && existing.batchNo === item.batchNo);
+    if (existingIndex >= 0) {
+        // Update existing item
+        list[existingIndex] = item;
+    } else {
+        // Add new item to top
+        list.unshift(item);
+    }
+    if ("TURBOPACK compile-time falsy", 0) //TURBOPACK unreachable
+    ;
+    return list;
+}
+function downloadCSV(filename, rows) {
     if ("TURBOPACK compile-time truthy", 1) return;
     //TURBOPACK unreachable
     ;
-    const existing = undefined;
-    // Remove if already exists
-    const filtered = undefined;
-};
-const removeFromReorderList = (id)=>{
-    if ("TURBOPACK compile-time truthy", 1) return;
-    //TURBOPACK unreachable
-    ;
-    const existing = undefined;
-    const filtered = undefined;
-};
-const downloadCSV = (filename, rows)=>{
-    const csvContent = rows.map((row)=>row.map((field)=>`"${field.replace(/"/g, '""')}"`).join(',')).join('\n');
-    const blob = new Blob([
-        csvContent
-    ], {
-        type: 'text/csv;charset=utf-8;'
-    });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', filename);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-};
+    // Get headers from first row
+    const headers = undefined;
+    // Create CSV content
+    const csvContent = undefined;
+    // Create and trigger download
+    const blob = undefined;
+    const link = undefined;
+    const url = undefined;
+}
 }),
 "[project]/components/dashboard/inventory-ai-assistant.tsx [app-ssr] (ecmascript)", ((__turbopack_context__) => {
 "use strict";
@@ -2739,7 +2762,9 @@ function InventoryAIAssistant({ medicines, isOpen, onOpenChange, onHighlightMedi
     };
     // Action handlers
     const handleCreateTransferRequest = ()=>{
-        setSelectedMedicines(criticalMedicines.length > 0 ? criticalMedicines : []);
+        // Get critical medicines (quantity === 0 OR quantity < threshold * 0.25)
+        const criticalMeds = medicines.filter((med)=>med.currentStock === 0 || med.currentStock < med.minThreshold * 0.25);
+        setSelectedMedicines(criticalMeds);
         setTransferForm({
             from: "Central Warehouse",
             to: "",
@@ -2750,33 +2775,23 @@ function InventoryAIAssistant({ medicines, isOpen, onOpenChange, onHighlightMedi
         setIsTransferDialogOpen(true);
     };
     const handleMarkForReorder = ()=>{
-        setSelectedMedicines(lowStockMedicines.length > 0 ? lowStockMedicines : []);
+        // Get low stock medicines (quantity < threshold)
+        const lowStockMeds = medicines.filter((med)=>med.currentStock < med.minThreshold);
+        setSelectedMedicines(lowStockMeds);
         setIsReorderDialogOpen(true);
     };
     const handleExportList = ()=>{
         const exportMedicines = selectedMedicines.length > 0 ? selectedMedicines : medicines;
-        const csvData = [
-            [
-                "Name",
-                "Category",
-                "Batch No",
-                "Quantity",
-                "Threshold",
-                "Expiry Date",
-                "Status",
-                "Reorder Flag"
-            ],
-            ...exportMedicines.map((med)=>[
-                    med.name,
-                    med.category,
-                    med.batchNumber,
-                    med.currentStock.toString(),
-                    med.minThreshold.toString(),
-                    med.expiryDate,
-                    getStockStatus(med.currentStock, med.minThreshold),
-                    "false" // Reorder flag - could be enhanced later
-                ])
-        ];
+        const csvData = exportMedicines.map((med)=>({
+                "Medicine": med.name,
+                "Category": med.category,
+                "Batch No": med.batchNumber || "",
+                "Current Stock": med.currentStock,
+                "Threshold": med.minThreshold,
+                "Expiry Date": med.expiryDate || "",
+                "Status": getStockStatus(med.currentStock, med.minThreshold),
+                "Reorder Flag": "false" // Reorder flag - could be enhanced later
+            }));
         (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$dms$2d$storage$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["downloadCSV"])(`inventory-export-${new Date().toISOString().split('T')[0]}.csv`, csvData);
         toast({
             title: "Export Started",
@@ -2794,7 +2809,7 @@ function InventoryAIAssistant({ medicines, isOpen, onOpenChange, onHighlightMedi
                 threshold: med.minThreshold
             }));
         const request = {
-            id: `transfer-${Date.now()}`,
+            id: crypto.randomUUID(),
             createdAt: new Date().toISOString(),
             from: transferForm.from,
             to: transferForm.to,
@@ -2803,7 +2818,8 @@ function InventoryAIAssistant({ medicines, isOpen, onOpenChange, onHighlightMedi
             status: "Requested",
             notes: transferForm.notes
         };
-        (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$dms$2d$storage$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["saveTransferRequest"])(request);
+        (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$dms$2d$storage$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["addTransferRequest"])(request);
+        (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$dms$2d$storage$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["emitTransferUpdated"])();
         setIsTransferDialogOpen(false);
         toast({
             title: "Transfer Request Created",
@@ -2820,8 +2836,10 @@ function InventoryAIAssistant({ medicines, isOpen, onOpenChange, onHighlightMedi
             else if (new Date(med.expiryDate) < new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)) reason = "Expiring soon";
             const reorderItem = {
                 id: med.id,
-                name: med.name,
+                medicine: med.name,
                 batchNo: med.batchNumber,
+                currentStock: med.currentStock,
+                threshold: med.minThreshold,
                 suggestedQty: Math.max(med.minThreshold * 2 - med.currentStock, 10),
                 reason,
                 createdAt: new Date().toISOString()
@@ -2839,10 +2857,10 @@ function InventoryAIAssistant({ medicines, isOpen, onOpenChange, onHighlightMedi
         onOpenChange: onOpenChange,
         children: [
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$dialog$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["DialogContent"], {
-                className: "w-[95vw] max-w-[900px] max-h-[85vh] flex flex-col p-0",
+                className: "w-[95vw] max-w-[900px] max-h-[85vh] flex flex-col p-0 bg-white dark:bg-slate-900",
                 children: [
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                        className: "flex-shrink-0 border-b bg-background px-6 py-4",
+                        className: "flex-shrink-0 border-b border-slate-200 dark:border-slate-700 bg-background px-6 py-4",
                         children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$dialog$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["DialogHeader"], {
                             className: "space-y-1",
                             children: [
@@ -2853,14 +2871,14 @@ function InventoryAIAssistant({ medicines, isOpen, onOpenChange, onHighlightMedi
                                             className: "h-5 w-5"
                                         }, void 0, false, {
                                             fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                            lineNumber: 354,
+                                            lineNumber: 360,
                                             columnNumber: 15
                                         }, this),
                                         "AI Inventory Assistant"
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                    lineNumber: 353,
+                                    lineNumber: 359,
                                     columnNumber: 13
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$dialog$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["DialogDescription"], {
@@ -2868,18 +2886,18 @@ function InventoryAIAssistant({ medicines, isOpen, onOpenChange, onHighlightMedi
                                     children: "Get intelligent insights and ask questions about your medicine inventory"
                                 }, void 0, false, {
                                     fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                    lineNumber: 357,
+                                    lineNumber: 363,
                                     columnNumber: 13
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                            lineNumber: 352,
+                            lineNumber: 358,
                             columnNumber: 11
                         }, this)
                     }, void 0, false, {
                         fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                        lineNumber: 351,
+                        lineNumber: 357,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2889,7 +2907,7 @@ function InventoryAIAssistant({ medicines, isOpen, onOpenChange, onHighlightMedi
                                 className: "flex-1 overflow-y-auto p-4 space-y-4",
                                 children: [
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Card"], {
-                                        className: "border-0 shadow-none",
+                                        className: "border-0 shadow-none bg-slate-50 dark:bg-slate-800",
                                         children: [
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["CardHeader"], {
                                                 className: "px-0 py-2",
@@ -2898,30 +2916,30 @@ function InventoryAIAssistant({ medicines, isOpen, onOpenChange, onHighlightMedi
                                                     children: "Current Inventory Summary"
                                                 }, void 0, false, {
                                                     fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                                    lineNumber: 369,
+                                                    lineNumber: 375,
                                                     columnNumber: 17
                                                 }, this)
                                             }, void 0, false, {
                                                 fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                                lineNumber: 368,
+                                                lineNumber: 374,
                                                 columnNumber: 15
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["CardContent"], {
                                                 className: "px-0 py-2 space-y-2",
                                                 children: [
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                                        className: "flex items-center gap-3 cursor-pointer hover:bg-red-50 p-3 rounded-lg transition-colors border border-transparent hover:border-red-200",
+                                                        className: "flex items-center gap-3 cursor-pointer hover:bg-red-50 dark:hover:bg-red-900/20 p-3 rounded-lg transition-colors border border-transparent hover:border-red-200 dark:hover:border-red-800",
                                                         onClick: ()=>handleSummaryClick('critical'),
                                                         children: [
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$triangle$2d$alert$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__AlertTriangle$3e$__["AlertTriangle"], {
-                                                                className: "h-4 w-4 text-red-500 flex-shrink-0"
+                                                                className: "h-4 w-4 text-red-500 dark:text-red-400 flex-shrink-0"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                                                lineNumber: 376,
+                                                                lineNumber: 382,
                                                                 columnNumber: 19
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
-                                                                className: "text-sm flex-1",
+                                                                className: "text-sm flex-1 text-slate-900 dark:text-slate-100",
                                                                 children: [
                                                                     criticalMedicines.length,
                                                                     " critical medicine",
@@ -2930,29 +2948,29 @@ function InventoryAIAssistant({ medicines, isOpen, onOpenChange, onHighlightMedi
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                                                lineNumber: 377,
+                                                                lineNumber: 383,
                                                                 columnNumber: 19
                                                             }, this),
                                                             criticalMedicines.length > 0 && getStatusBadge("critical")
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                                        lineNumber: 372,
+                                                        lineNumber: 378,
                                                         columnNumber: 17
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                                        className: "flex items-center gap-3 cursor-pointer hover:bg-amber-50 p-3 rounded-lg transition-colors border border-transparent hover:border-amber-200",
+                                                        className: "flex items-center gap-3 cursor-pointer hover:bg-amber-50 dark:hover:bg-amber-900/20 p-3 rounded-lg transition-colors border border-transparent hover:border-amber-200 dark:hover:border-amber-800",
                                                         onClick: ()=>handleSummaryClick('low'),
                                                         children: [
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$triangle$2d$alert$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__AlertTriangle$3e$__["AlertTriangle"], {
-                                                                className: "h-4 w-4 text-amber-500 flex-shrink-0"
+                                                                className: "h-4 w-4 text-amber-500 dark:text-amber-400 flex-shrink-0"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                                                lineNumber: 386,
+                                                                lineNumber: 392,
                                                                 columnNumber: 19
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
-                                                                className: "text-sm flex-1",
+                                                                className: "text-sm flex-1 text-slate-900 dark:text-slate-100",
                                                                 children: [
                                                                     lowStockMedicines.length,
                                                                     " low stock medicine",
@@ -2961,29 +2979,29 @@ function InventoryAIAssistant({ medicines, isOpen, onOpenChange, onHighlightMedi
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                                                lineNumber: 387,
+                                                                lineNumber: 393,
                                                                 columnNumber: 19
                                                             }, this),
                                                             lowStockMedicines.length > 0 && getStatusBadge("low")
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                                        lineNumber: 382,
+                                                        lineNumber: 388,
                                                         columnNumber: 17
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                                        className: "flex items-center gap-3 cursor-pointer hover:bg-blue-50 p-3 rounded-lg transition-colors border border-transparent hover:border-blue-200",
+                                                        className: "flex items-center gap-3 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20 p-3 rounded-lg transition-colors border border-transparent hover:border-blue-200 dark:hover:border-blue-800",
                                                         onClick: ()=>handleSummaryClick('expiring'),
                                                         children: [
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$package$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Package$3e$__["Package"], {
-                                                                className: "h-4 w-4 text-blue-500 flex-shrink-0"
+                                                                className: "h-4 w-4 text-blue-500 dark:text-blue-400 flex-shrink-0"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                                                lineNumber: 396,
+                                                                lineNumber: 402,
                                                                 columnNumber: 19
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
-                                                                className: "text-sm flex-1",
+                                                                className: "text-sm flex-1 text-slate-900 dark:text-slate-100",
                                                                 children: [
                                                                     expiringSoon.length,
                                                                     " medicine",
@@ -2992,29 +3010,29 @@ function InventoryAIAssistant({ medicines, isOpen, onOpenChange, onHighlightMedi
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                                                lineNumber: 397,
+                                                                lineNumber: 403,
                                                                 columnNumber: 19
                                                             }, this)
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                                        lineNumber: 392,
+                                                        lineNumber: 398,
                                                         columnNumber: 17
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                                lineNumber: 371,
+                                                lineNumber: 377,
                                                 columnNumber: 15
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                        lineNumber: 367,
+                                        lineNumber: 373,
                                         columnNumber: 13
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Card"], {
-                                        className: "border-0 shadow-none",
+                                        className: "border-0 shadow-none bg-slate-50 dark:bg-slate-800",
                                         children: [
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["CardHeader"], {
                                                 className: "px-0 py-2",
@@ -3023,12 +3041,12 @@ function InventoryAIAssistant({ medicines, isOpen, onOpenChange, onHighlightMedi
                                                     children: "Ask Me Anything"
                                                 }, void 0, false, {
                                                     fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                                    lineNumber: 407,
+                                                    lineNumber: 413,
                                                     columnNumber: 17
                                                 }, this)
                                             }, void 0, false, {
                                                 fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                                lineNumber: 406,
+                                                lineNumber: 412,
                                                 columnNumber: 15
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["CardContent"], {
@@ -3043,7 +3061,7 @@ function InventoryAIAssistant({ medicines, isOpen, onOpenChange, onHighlightMedi
                                                             children: 'Ask me about your inventory! Try: "Which medicines are critical?" or "Show me low stock items"'
                                                         }, void 0, false, {
                                                             fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                                            lineNumber: 413,
+                                                            lineNumber: 419,
                                                             columnNumber: 23
                                                         }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                                             className: "space-y-4",
@@ -3059,7 +3077,7 @@ function InventoryAIAssistant({ medicines, isOpen, onOpenChange, onHighlightMedi
                                                                                         children: chat.query
                                                                                     }, void 0, false, {
                                                                                         fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                                                                        lineNumber: 422,
+                                                                                        lineNumber: 428,
                                                                                         columnNumber: 31
                                                                                     }, this),
                                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3069,18 +3087,18 @@ function InventoryAIAssistant({ medicines, isOpen, onOpenChange, onHighlightMedi
                                                                                             children: "👤"
                                                                                         }, void 0, false, {
                                                                                             fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                                                                            lineNumber: 426,
+                                                                                            lineNumber: 432,
                                                                                             columnNumber: 33
                                                                                         }, this)
                                                                                     }, void 0, false, {
                                                                                         fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                                                                        lineNumber: 425,
+                                                                                        lineNumber: 431,
                                                                                         columnNumber: 31
                                                                                     }, this)
                                                                                 ]
                                                                             }, void 0, true, {
                                                                                 fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                                                                lineNumber: 421,
+                                                                                lineNumber: 427,
                                                                                 columnNumber: 29
                                                                             }, this),
                                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3092,12 +3110,12 @@ function InventoryAIAssistant({ medicines, isOpen, onOpenChange, onHighlightMedi
                                                                                             className: "h-3 w-3"
                                                                                         }, void 0, false, {
                                                                                             fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                                                                            lineNumber: 432,
+                                                                                            lineNumber: 438,
                                                                                             columnNumber: 33
                                                                                         }, this)
                                                                                     }, void 0, false, {
                                                                                         fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                                                                        lineNumber: 431,
+                                                                                        lineNumber: 437,
                                                                                         columnNumber: 31
                                                                                     }, this),
                                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3108,7 +3126,7 @@ function InventoryAIAssistant({ medicines, isOpen, onOpenChange, onHighlightMedi
                                                                                                 children: chat.response
                                                                                             }, void 0, false, {
                                                                                                 fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                                                                                lineNumber: 435,
+                                                                                                lineNumber: 441,
                                                                                                 columnNumber: 33
                                                                                             }, this),
                                                                                             chat.actions && chat.actions.length > 0 && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3123,51 +3141,51 @@ function InventoryAIAssistant({ medicines, isOpen, onOpenChange, onHighlightMedi
                                                                                                                 className: "h-3 w-3 mr-1"
                                                                                                             }, void 0, false, {
                                                                                                                 fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                                                                                                lineNumber: 449,
+                                                                                                                lineNumber: 455,
                                                                                                                 columnNumber: 88
                                                                                                             }, this),
                                                                                                             action.label === "Mark for Reorder" && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$refresh$2d$cw$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__RefreshCw$3e$__["RefreshCw"], {
                                                                                                                 className: "h-3 w-3 mr-1"
                                                                                                             }, void 0, false, {
                                                                                                                 fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                                                                                                lineNumber: 450,
+                                                                                                                lineNumber: 456,
                                                                                                                 columnNumber: 81
                                                                                                             }, this),
                                                                                                             action.label === "Export This List" && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$file$2d$text$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__FileText$3e$__["FileText"], {
                                                                                                                 className: "h-3 w-3 mr-1"
                                                                                                             }, void 0, false, {
                                                                                                                 fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                                                                                                lineNumber: 451,
+                                                                                                                lineNumber: 457,
                                                                                                                 columnNumber: 81
                                                                                                             }, this),
                                                                                                             action.label
                                                                                                         ]
                                                                                                     }, actionIndex, true, {
                                                                                                         fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                                                                                        lineNumber: 442,
+                                                                                                        lineNumber: 448,
                                                                                                         columnNumber: 39
                                                                                                     }, this))
                                                                                             }, void 0, false, {
                                                                                                 fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                                                                                lineNumber: 440,
+                                                                                                lineNumber: 446,
                                                                                                 columnNumber: 35
                                                                                             }, this)
                                                                                         ]
                                                                                     }, void 0, true, {
                                                                                         fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                                                                        lineNumber: 434,
+                                                                                        lineNumber: 440,
                                                                                         columnNumber: 31
                                                                                     }, this)
                                                                                 ]
                                                                             }, void 0, true, {
                                                                                 fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                                                                lineNumber: 430,
+                                                                                lineNumber: 436,
                                                                                 columnNumber: 29
                                                                             }, this)
                                                                         ]
                                                                     }, index, true, {
                                                                         fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                                                        lineNumber: 419,
+                                                                        lineNumber: 425,
                                                                         columnNumber: 27
                                                                     }, this)),
                                                                 isTyping && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3179,12 +3197,12 @@ function InventoryAIAssistant({ medicines, isOpen, onOpenChange, onHighlightMedi
                                                                                 className: "h-3 w-3"
                                                                             }, void 0, false, {
                                                                                 fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                                                                lineNumber: 465,
+                                                                                lineNumber: 471,
                                                                                 columnNumber: 31
                                                                             }, this)
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                                                            lineNumber: 464,
+                                                                            lineNumber: 470,
                                                                             columnNumber: 29
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3196,7 +3214,7 @@ function InventoryAIAssistant({ medicines, isOpen, onOpenChange, onHighlightMedi
                                                                                         children: "AI is analyzing inventory"
                                                                                     }, void 0, false, {
                                                                                         fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                                                                        lineNumber: 469,
+                                                                                        lineNumber: 475,
                                                                                         columnNumber: 33
                                                                                     }, this),
                                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3209,7 +3227,7 @@ function InventoryAIAssistant({ medicines, isOpen, onOpenChange, onHighlightMedi
                                                                                                 }
                                                                                             }, void 0, false, {
                                                                                                 fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                                                                                lineNumber: 471,
+                                                                                                lineNumber: 477,
                                                                                                 columnNumber: 35
                                                                                             }, this),
                                                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3219,7 +3237,7 @@ function InventoryAIAssistant({ medicines, isOpen, onOpenChange, onHighlightMedi
                                                                                                 }
                                                                                             }, void 0, false, {
                                                                                                 fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                                                                                lineNumber: 472,
+                                                                                                lineNumber: 478,
                                                                                                 columnNumber: 35
                                                                                             }, this),
                                                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3229,67 +3247,67 @@ function InventoryAIAssistant({ medicines, isOpen, onOpenChange, onHighlightMedi
                                                                                                 }
                                                                                             }, void 0, false, {
                                                                                                 fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                                                                                lineNumber: 473,
+                                                                                                lineNumber: 479,
                                                                                                 columnNumber: 35
                                                                                             }, this)
                                                                                         ]
                                                                                     }, void 0, true, {
                                                                                         fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                                                                        lineNumber: 470,
+                                                                                        lineNumber: 476,
                                                                                         columnNumber: 33
                                                                                     }, this)
                                                                                 ]
                                                                             }, void 0, true, {
                                                                                 fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                                                                lineNumber: 468,
+                                                                                lineNumber: 474,
                                                                                 columnNumber: 31
                                                                             }, this)
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                                                            lineNumber: 467,
+                                                                            lineNumber: 473,
                                                                             columnNumber: 29
                                                                         }, this)
                                                                     ]
                                                                 }, void 0, true, {
                                                                     fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                                                    lineNumber: 463,
+                                                                    lineNumber: 469,
                                                                     columnNumber: 27
                                                                 }, this)
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                                            lineNumber: 417,
+                                                            lineNumber: 423,
                                                             columnNumber: 23
                                                         }, this)
                                                     }, void 0, false, {
                                                         fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                                        lineNumber: 411,
+                                                        lineNumber: 417,
                                                         columnNumber: 19
                                                     }, this)
                                                 }, void 0, false, {
                                                     fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                                    lineNumber: 410,
+                                                    lineNumber: 416,
                                                     columnNumber: 17
                                                 }, this)
                                             }, void 0, false, {
                                                 fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                                lineNumber: 409,
+                                                lineNumber: 415,
                                                 columnNumber: 15
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                        lineNumber: 405,
+                                        lineNumber: 411,
                                         columnNumber: 13
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                lineNumber: 365,
+                                lineNumber: 371,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                className: "flex-shrink-0 border-t bg-background px-4 py-3",
+                                className: "flex-shrink-0 border-t border-slate-200 dark:border-slate-700 bg-background px-4 py-3",
                                 children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                     className: "flex gap-2",
                                     children: [
@@ -3298,10 +3316,10 @@ function InventoryAIAssistant({ medicines, isOpen, onOpenChange, onHighlightMedi
                                             value: chatInput,
                                             onChange: (e)=>setChatInput(e.target.value),
                                             onKeyPress: handleKeyPress,
-                                            className: "flex-1"
+                                            className: "flex-1 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100"
                                         }, void 0, false, {
                                             fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                            lineNumber: 490,
+                                            lineNumber: 496,
                                             columnNumber: 15
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Button"], {
@@ -3312,35 +3330,35 @@ function InventoryAIAssistant({ medicines, isOpen, onOpenChange, onHighlightMedi
                                                 className: "h-4 w-4"
                                             }, void 0, false, {
                                                 fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                                lineNumber: 498,
+                                                lineNumber: 504,
                                                 columnNumber: 17
                                             }, this)
                                         }, void 0, false, {
                                             fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                            lineNumber: 497,
+                                            lineNumber: 503,
                                             columnNumber: 15
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                    lineNumber: 489,
+                                    lineNumber: 495,
                                     columnNumber: 13
                                 }, this)
                             }, void 0, false, {
                                 fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                lineNumber: 488,
+                                lineNumber: 494,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                        lineNumber: 364,
+                        lineNumber: 370,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                lineNumber: 349,
+                lineNumber: 355,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$dialog$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Dialog"], {
@@ -3358,27 +3376,27 @@ function InventoryAIAssistant({ medicines, isOpen, onOpenChange, onHighlightMedi
                                             className: "h-5 w-5"
                                         }, void 0, false, {
                                             fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                            lineNumber: 510,
+                                            lineNumber: 516,
                                             columnNumber: 15
                                         }, this),
                                         "Create Transfer Request"
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                    lineNumber: 509,
+                                    lineNumber: 515,
                                     columnNumber: 13
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$dialog$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["DialogDescription"], {
                                     children: "Request transfer of critical medicines to another facility"
                                 }, void 0, false, {
                                     fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                    lineNumber: 513,
+                                    lineNumber: 519,
                                     columnNumber: 13
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                            lineNumber: 508,
+                            lineNumber: 514,
                             columnNumber: 11
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3395,7 +3413,7 @@ function InventoryAIAssistant({ medicines, isOpen, onOpenChange, onHighlightMedi
                                                     children: "From Facility"
                                                 }, void 0, false, {
                                                     fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                                    lineNumber: 522,
+                                                    lineNumber: 528,
                                                     columnNumber: 17
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$input$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Input"], {
@@ -3405,13 +3423,13 @@ function InventoryAIAssistant({ medicines, isOpen, onOpenChange, onHighlightMedi
                                                     className: "bg-muted"
                                                 }, void 0, false, {
                                                     fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                                    lineNumber: 523,
+                                                    lineNumber: 529,
                                                     columnNumber: 17
                                                 }, this)
                                             ]
                                         }, void 0, true, {
                                             fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                            lineNumber: 521,
+                                            lineNumber: 527,
                                             columnNumber: 15
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3422,7 +3440,7 @@ function InventoryAIAssistant({ medicines, isOpen, onOpenChange, onHighlightMedi
                                                     children: "To Facility *"
                                                 }, void 0, false, {
                                                     fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                                    lineNumber: 531,
+                                                    lineNumber: 537,
                                                     columnNumber: 17
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$select$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Select"], {
@@ -3437,12 +3455,12 @@ function InventoryAIAssistant({ medicines, isOpen, onOpenChange, onHighlightMedi
                                                                 placeholder: "Select destination"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                                                lineNumber: 537,
+                                                                lineNumber: 543,
                                                                 columnNumber: 21
                                                             }, this)
                                                         }, void 0, false, {
                                                             fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                                            lineNumber: 536,
+                                                            lineNumber: 542,
                                                             columnNumber: 19
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$select$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["SelectContent"], {
@@ -3452,7 +3470,7 @@ function InventoryAIAssistant({ medicines, isOpen, onOpenChange, onHighlightMedi
                                                                     children: "City General Hospital"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                                                    lineNumber: 540,
+                                                                    lineNumber: 546,
                                                                     columnNumber: 21
                                                                 }, this),
                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$select$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["SelectItem"], {
@@ -3460,7 +3478,7 @@ function InventoryAIAssistant({ medicines, isOpen, onOpenChange, onHighlightMedi
                                                                     children: "Regional Medical Center"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                                                    lineNumber: 541,
+                                                                    lineNumber: 547,
                                                                     columnNumber: 21
                                                                 }, this),
                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$select$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["SelectItem"], {
@@ -3468,31 +3486,31 @@ function InventoryAIAssistant({ medicines, isOpen, onOpenChange, onHighlightMedi
                                                                     children: "Downtown Pharmacy"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                                                    lineNumber: 542,
+                                                                    lineNumber: 548,
                                                                     columnNumber: 21
                                                                 }, this)
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                                            lineNumber: 539,
+                                                            lineNumber: 545,
                                                             columnNumber: 19
                                                         }, this)
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                                    lineNumber: 532,
+                                                    lineNumber: 538,
                                                     columnNumber: 17
                                                 }, this)
                                             ]
                                         }, void 0, true, {
                                             fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                            lineNumber: 530,
+                                            lineNumber: 536,
                                             columnNumber: 15
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                    lineNumber: 520,
+                                    lineNumber: 526,
                                     columnNumber: 13
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3503,7 +3521,7 @@ function InventoryAIAssistant({ medicines, isOpen, onOpenChange, onHighlightMedi
                                             children: "Priority"
                                         }, void 0, false, {
                                             fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                            lineNumber: 550,
+                                            lineNumber: 556,
                                             columnNumber: 15
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$select$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Select"], {
@@ -3516,12 +3534,12 @@ function InventoryAIAssistant({ medicines, isOpen, onOpenChange, onHighlightMedi
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$select$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["SelectTrigger"], {
                                                     children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$select$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["SelectValue"], {}, void 0, false, {
                                                         fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                                        lineNumber: 558,
+                                                        lineNumber: 564,
                                                         columnNumber: 19
                                                     }, this)
                                                 }, void 0, false, {
                                                     fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                                    lineNumber: 557,
+                                                    lineNumber: 563,
                                                     columnNumber: 17
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$select$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["SelectContent"], {
@@ -3531,7 +3549,7 @@ function InventoryAIAssistant({ medicines, isOpen, onOpenChange, onHighlightMedi
                                                             children: "Normal"
                                                         }, void 0, false, {
                                                             fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                                            lineNumber: 561,
+                                                            lineNumber: 567,
                                                             columnNumber: 19
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$select$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["SelectItem"], {
@@ -3539,7 +3557,7 @@ function InventoryAIAssistant({ medicines, isOpen, onOpenChange, onHighlightMedi
                                                             children: "High"
                                                         }, void 0, false, {
                                                             fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                                            lineNumber: 562,
+                                                            lineNumber: 568,
                                                             columnNumber: 19
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$select$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["SelectItem"], {
@@ -3547,25 +3565,25 @@ function InventoryAIAssistant({ medicines, isOpen, onOpenChange, onHighlightMedi
                                                             children: "Critical"
                                                         }, void 0, false, {
                                                             fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                                            lineNumber: 563,
+                                                            lineNumber: 569,
                                                             columnNumber: 19
                                                         }, this)
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                                    lineNumber: 560,
+                                                    lineNumber: 566,
                                                     columnNumber: 17
                                                 }, this)
                                             ]
                                         }, void 0, true, {
                                             fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                            lineNumber: 551,
+                                            lineNumber: 557,
                                             columnNumber: 15
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                    lineNumber: 549,
+                                    lineNumber: 555,
                                     columnNumber: 13
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3575,7 +3593,7 @@ function InventoryAIAssistant({ medicines, isOpen, onOpenChange, onHighlightMedi
                                             children: "Medicines to Transfer"
                                         }, void 0, false, {
                                             fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                            lineNumber: 570,
+                                            lineNumber: 576,
                                             columnNumber: 15
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3592,7 +3610,7 @@ function InventoryAIAssistant({ medicines, isOpen, onOpenChange, onHighlightMedi
                                                                     className: "pointer-events-none"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                                                    lineNumber: 575,
+                                                                    lineNumber: 581,
                                                                     columnNumber: 23
                                                                 }, this),
                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3602,7 +3620,7 @@ function InventoryAIAssistant({ medicines, isOpen, onOpenChange, onHighlightMedi
                                                                             children: med.name
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                                                            lineNumber: 581,
+                                                                            lineNumber: 587,
                                                                             columnNumber: 25
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -3617,19 +3635,19 @@ function InventoryAIAssistant({ medicines, isOpen, onOpenChange, onHighlightMedi
                                                                             ]
                                                                         }, void 0, true, {
                                                                             fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                                                            lineNumber: 582,
+                                                                            lineNumber: 588,
                                                                             columnNumber: 25
                                                                         }, this)
                                                                     ]
                                                                 }, void 0, true, {
                                                                     fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                                                    lineNumber: 580,
+                                                                    lineNumber: 586,
                                                                     columnNumber: 23
                                                                 }, this)
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                                            lineNumber: 574,
+                                                            lineNumber: 580,
                                                             columnNumber: 21
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3641,7 +3659,7 @@ function InventoryAIAssistant({ medicines, isOpen, onOpenChange, onHighlightMedi
                                                                     children: "Qty:"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                                                    lineNumber: 588,
+                                                                    lineNumber: 594,
                                                                     columnNumber: 23
                                                                 }, this),
                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$input$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Input"], {
@@ -3660,30 +3678,30 @@ function InventoryAIAssistant({ medicines, isOpen, onOpenChange, onHighlightMedi
                                                                     className: "w-20"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                                                    lineNumber: 589,
+                                                                    lineNumber: 595,
                                                                     columnNumber: 23
                                                                 }, this)
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                                            lineNumber: 587,
+                                                            lineNumber: 593,
                                                             columnNumber: 21
                                                         }, this)
                                                     ]
                                                 }, med.id, true, {
                                                     fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                                    lineNumber: 573,
+                                                    lineNumber: 579,
                                                     columnNumber: 19
                                                 }, this))
                                         }, void 0, false, {
                                             fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                            lineNumber: 571,
+                                            lineNumber: 577,
                                             columnNumber: 15
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                    lineNumber: 569,
+                                    lineNumber: 575,
                                     columnNumber: 13
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3694,7 +3712,7 @@ function InventoryAIAssistant({ medicines, isOpen, onOpenChange, onHighlightMedi
                                             children: "Notes (Optional)"
                                         }, void 0, false, {
                                             fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                            lineNumber: 612,
+                                            lineNumber: 618,
                                             columnNumber: 15
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$textarea$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Textarea"], {
@@ -3708,19 +3726,19 @@ function InventoryAIAssistant({ medicines, isOpen, onOpenChange, onHighlightMedi
                                             rows: 3
                                         }, void 0, false, {
                                             fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                            lineNumber: 613,
+                                            lineNumber: 619,
                                             columnNumber: 15
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                    lineNumber: 611,
+                                    lineNumber: 617,
                                     columnNumber: 13
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                            lineNumber: 518,
+                            lineNumber: 524,
                             columnNumber: 11
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$dialog$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["DialogFooter"], {
@@ -3731,7 +3749,7 @@ function InventoryAIAssistant({ medicines, isOpen, onOpenChange, onHighlightMedi
                                     children: "Cancel"
                                 }, void 0, false, {
                                     fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                    lineNumber: 624,
+                                    lineNumber: 630,
                                     columnNumber: 13
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Button"], {
@@ -3740,24 +3758,24 @@ function InventoryAIAssistant({ medicines, isOpen, onOpenChange, onHighlightMedi
                                     children: "Create Transfer Request"
                                 }, void 0, false, {
                                     fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                    lineNumber: 627,
+                                    lineNumber: 633,
                                     columnNumber: 13
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                            lineNumber: 623,
+                            lineNumber: 629,
                             columnNumber: 11
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                    lineNumber: 507,
+                    lineNumber: 513,
                     columnNumber: 9
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                lineNumber: 506,
+                lineNumber: 512,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$dialog$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Dialog"], {
@@ -3775,27 +3793,27 @@ function InventoryAIAssistant({ medicines, isOpen, onOpenChange, onHighlightMedi
                                             className: "h-5 w-5"
                                         }, void 0, false, {
                                             fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                            lineNumber: 639,
+                                            lineNumber: 645,
                                             columnNumber: 15
                                         }, this),
                                         "Mark for Reorder"
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                    lineNumber: 638,
+                                    lineNumber: 644,
                                     columnNumber: 13
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$dialog$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["DialogDescription"], {
                                     children: "Add low-stock medicines to the reorder list for procurement"
                                 }, void 0, false, {
                                     fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                    lineNumber: 642,
+                                    lineNumber: 648,
                                     columnNumber: 13
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                            lineNumber: 637,
+                            lineNumber: 643,
                             columnNumber: 11
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3807,7 +3825,7 @@ function InventoryAIAssistant({ medicines, isOpen, onOpenChange, onHighlightMedi
                                         children: "Medicines to Reorder"
                                     }, void 0, false, {
                                         fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                        lineNumber: 649,
+                                        lineNumber: 655,
                                         columnNumber: 15
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3830,7 +3848,7 @@ function InventoryAIAssistant({ medicines, isOpen, onOpenChange, onHighlightMedi
                                                                 className: "pointer-events-none"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                                                lineNumber: 662,
+                                                                lineNumber: 668,
                                                                 columnNumber: 25
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3840,7 +3858,7 @@ function InventoryAIAssistant({ medicines, isOpen, onOpenChange, onHighlightMedi
                                                                         children: med.name
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                                                        lineNumber: 668,
+                                                                        lineNumber: 674,
                                                                         columnNumber: 27
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -3855,7 +3873,7 @@ function InventoryAIAssistant({ medicines, isOpen, onOpenChange, onHighlightMedi
                                                                         ]
                                                                     }, void 0, true, {
                                                                         fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                                                        lineNumber: 669,
+                                                                        lineNumber: 675,
                                                                         columnNumber: 27
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -3866,43 +3884,43 @@ function InventoryAIAssistant({ medicines, isOpen, onOpenChange, onHighlightMedi
                                                                         ]
                                                                     }, void 0, true, {
                                                                         fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                                                        lineNumber: 672,
+                                                                        lineNumber: 678,
                                                                         columnNumber: 27
                                                                     }, this)
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                                                lineNumber: 667,
+                                                                lineNumber: 673,
                                                                 columnNumber: 25
                                                             }, this)
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                                        lineNumber: 661,
+                                                        lineNumber: 667,
                                                         columnNumber: 23
                                                     }, this),
                                                     getStatusBadge(status)
                                                 ]
                                             }, med.id, true, {
                                                 fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                                lineNumber: 660,
+                                                lineNumber: 666,
                                                 columnNumber: 21
                                             }, this);
                                         })
                                     }, void 0, false, {
                                         fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                        lineNumber: 650,
+                                        lineNumber: 656,
                                         columnNumber: 15
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                lineNumber: 648,
+                                lineNumber: 654,
                                 columnNumber: 13
                             }, this)
                         }, void 0, false, {
                             fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                            lineNumber: 647,
+                            lineNumber: 653,
                             columnNumber: 11
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$dialog$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["DialogFooter"], {
@@ -3913,7 +3931,7 @@ function InventoryAIAssistant({ medicines, isOpen, onOpenChange, onHighlightMedi
                                     children: "Cancel"
                                 }, void 0, false, {
                                     fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                    lineNumber: 684,
+                                    lineNumber: 690,
                                     columnNumber: 13
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Button"], {
@@ -3921,30 +3939,30 @@ function InventoryAIAssistant({ medicines, isOpen, onOpenChange, onHighlightMedi
                                     children: "Add to Reorder List"
                                 }, void 0, false, {
                                     fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                                    lineNumber: 687,
+                                    lineNumber: 693,
                                     columnNumber: 13
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                            lineNumber: 683,
+                            lineNumber: 689,
                             columnNumber: 11
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                    lineNumber: 636,
+                    lineNumber: 642,
                     columnNumber: 9
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-                lineNumber: 635,
+                lineNumber: 641,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/components/dashboard/inventory-ai-assistant.tsx",
-        lineNumber: 348,
+        lineNumber: 354,
         columnNumber: 5
     }, this);
 }
@@ -4076,7 +4094,7 @@ function getStatusBadge(status) {
     switch(status){
         case "available":
             return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$badge$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Badge"], {
-                className: "bg-emerald-500 text-white hover:bg-emerald-600",
+                className: "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300",
                 children: [
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$circle$2d$check$2d$big$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__CheckCircle$3e$__["CheckCircle"], {
                         className: "mr-1 h-3 w-3"
@@ -4094,7 +4112,7 @@ function getStatusBadge(status) {
             }, this);
         case "low":
             return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$badge$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Badge"], {
-                className: "bg-amber-500 text-white hover:bg-amber-600",
+                className: "bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300",
                 children: [
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$triangle$2d$alert$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__AlertTriangle$3e$__["AlertTriangle"], {
                         className: "mr-1 h-3 w-3"
@@ -4112,7 +4130,7 @@ function getStatusBadge(status) {
             }, this);
         case "critical":
             return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$badge$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Badge"], {
-                className: "bg-red-600 text-white hover:bg-red-700",
+                className: "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300",
                 children: [
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$triangle$2d$alert$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__AlertTriangle$3e$__["AlertTriangle"], {
                         className: "mr-1 h-3 w-3"
@@ -4914,12 +4932,13 @@ function InventoryContent() {
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Card"], {
+                                className: "bg-white dark:bg-slate-900",
                                 children: [
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["CardHeader"], {
-                                        className: "border-b bg-muted/50",
+                                        className: "border-b border-slate-200 dark:border-slate-700 bg-muted/50",
                                         children: [
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["CardTitle"], {
-                                                className: "text-lg",
+                                                className: "text-lg text-slate-700 dark:text-slate-200",
                                                 children: "Medicine Inventory"
                                             }, void 0, false, {
                                                 fileName: "[project]/app/inventory/page.tsx",
@@ -4955,6 +4974,7 @@ function InventoryContent() {
                                                         className: "bg-muted/30",
                                                         children: [
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["TableHead"], {
+                                                                className: "text-slate-700 dark:text-slate-200",
                                                                 children: "Medicine Name"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/app/inventory/page.tsx",
@@ -4962,6 +4982,7 @@ function InventoryContent() {
                                                                 columnNumber: 21
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["TableHead"], {
+                                                                className: "text-slate-700 dark:text-slate-200",
                                                                 children: "Category"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/app/inventory/page.tsx",
@@ -4969,6 +4990,7 @@ function InventoryContent() {
                                                                 columnNumber: 21
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["TableHead"], {
+                                                                className: "text-slate-700 dark:text-slate-200",
                                                                 children: "Batch No."
                                                             }, void 0, false, {
                                                                 fileName: "[project]/app/inventory/page.tsx",
@@ -4976,7 +4998,7 @@ function InventoryContent() {
                                                                 columnNumber: 21
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["TableHead"], {
-                                                                className: "text-right",
+                                                                className: "text-right text-slate-700 dark:text-slate-200",
                                                                 children: "Current Stock"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/app/inventory/page.tsx",
@@ -4984,7 +5006,7 @@ function InventoryContent() {
                                                                 columnNumber: 21
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["TableHead"], {
-                                                                className: "text-right",
+                                                                className: "text-right text-slate-700 dark:text-slate-200",
                                                                 children: "Min Threshold"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/app/inventory/page.tsx",
@@ -4992,6 +5014,7 @@ function InventoryContent() {
                                                                 columnNumber: 21
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["TableHead"], {
+                                                                className: "text-slate-700 dark:text-slate-200",
                                                                 children: "Expiry Date"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/app/inventory/page.tsx",
@@ -4999,6 +5022,7 @@ function InventoryContent() {
                                                                 columnNumber: 21
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["TableHead"], {
+                                                                className: "text-slate-700 dark:text-slate-200",
                                                                 children: "Status"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/app/inventory/page.tsx",
@@ -5006,7 +5030,7 @@ function InventoryContent() {
                                                                 columnNumber: 21
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["TableHead"], {
-                                                                className: "text-right",
+                                                                className: "text-right text-slate-700 dark:text-slate-200",
                                                                 children: "Actions"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/app/inventory/page.tsx",
@@ -5042,17 +5066,17 @@ function InventoryContent() {
                                                     }, this) : filteredMedicines.map((med)=>{
                                                         const isHighlighted = highlightedMedicines.some((h)=>h.id === med.id);
                                                         const status = getStockStatus(med.currentStock, med.minThreshold);
-                                                        let highlightClass = "";
+                                                        let highlightClass = "hover:bg-slate-100 dark:hover:bg-slate-800";
                                                         if (isHighlighted) {
                                                             switch(status){
                                                                 case "critical":
-                                                                    highlightClass = "border-l-4 border-l-red-500 bg-red-50";
+                                                                    highlightClass = "border-l-4 border-l-red-500 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30";
                                                                     break;
                                                                 case "low":
-                                                                    highlightClass = "border-l-4 border-l-amber-500 bg-amber-50";
+                                                                    highlightClass = "border-l-4 border-l-amber-500 bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/30";
                                                                     break;
                                                                 default:
-                                                                    highlightClass = "border-l-4 border-l-yellow-500 bg-yellow-50";
+                                                                    highlightClass = "border-l-4 border-l-yellow-500 bg-yellow-50 dark:bg-yellow-900/20 hover:bg-yellow-100 dark:hover:bg-yellow-900/30";
                                                                     break;
                                                             }
                                                         }
@@ -5060,6 +5084,7 @@ function InventoryContent() {
                                                             className: highlightClass,
                                                             children: [
                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["TableCell"], {
+                                                                    className: "text-slate-800 dark:text-slate-100",
                                                                     children: med.name
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/app/inventory/page.tsx",
@@ -5067,6 +5092,7 @@ function InventoryContent() {
                                                                     columnNumber: 27
                                                                 }, this),
                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["TableCell"], {
+                                                                    className: "text-slate-800 dark:text-slate-100",
                                                                     children: med.category
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/app/inventory/page.tsx",
@@ -5074,6 +5100,7 @@ function InventoryContent() {
                                                                     columnNumber: 27
                                                                 }, this),
                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["TableCell"], {
+                                                                    className: "text-slate-800 dark:text-slate-100",
                                                                     children: med.batchNumber
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/app/inventory/page.tsx",
@@ -5081,7 +5108,7 @@ function InventoryContent() {
                                                                     columnNumber: 27
                                                                 }, this),
                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["TableCell"], {
-                                                                    className: "text-right",
+                                                                    className: "text-right text-slate-800 dark:text-slate-100",
                                                                     children: med.currentStock
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/app/inventory/page.tsx",
@@ -5089,7 +5116,7 @@ function InventoryContent() {
                                                                     columnNumber: 27
                                                                 }, this),
                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["TableCell"], {
-                                                                    className: "text-right",
+                                                                    className: "text-right text-slate-800 dark:text-slate-100",
                                                                     children: med.minThreshold
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/app/inventory/page.tsx",
@@ -5097,6 +5124,7 @@ function InventoryContent() {
                                                                     columnNumber: 27
                                                                 }, this),
                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["TableCell"], {
+                                                                    className: "text-slate-800 dark:text-slate-100",
                                                                     children: med.expiryDate
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/app/inventory/page.tsx",
