@@ -126,7 +126,7 @@ const priorityColors = {
 
 export default function TransfersPage() {
   const { searchQuery } = useSearch()
-  const [isAdmin] = useState(false)
+  const [isAdmin] = useState(true)
   const [transfers, setTransfers] = useState<DisplayTransfer[]>([])
   const [mockTransfersData] = useState(mockTransfers) // Keep for fallback
 

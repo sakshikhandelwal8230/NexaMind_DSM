@@ -357,7 +357,7 @@ export default function UsersPage() {
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                <div className="lg:col-span-3">
+                <div className="lg:col-span-4">
                   {/* Quick Filters */}
                   <Card className="mb-6">
                     <CardContent className="pt-6">
@@ -420,19 +420,21 @@ export default function UsersPage() {
                   </Tabs>
                 </div>
 
-                {/* User Insights */}
-                <div className="lg:col-span-1">
+                {/* User Insights - Below the table, full width */}
+                <div className="lg:col-span-4 mt-6">
                   <Card>
-                    <CardHeader>
-                      <CardTitle className="text-lg">User Insights</CardTitle>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-base">User Insights</CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-4">
-                      {Object.entries(userInsights).map(([role, count]) => (
-                        <div key={role} className="flex items-center justify-between">
-                          <span className="text-sm font-medium">{role}</span>
-                          <Badge variant="secondary">{count}</Badge>
-                        </div>
-                      ))}
+                    <CardContent>
+                      <div className="flex flex-wrap gap-6">
+                        {Object.entries(userInsights).map(([role, count]) => (
+                          <div key={role} className="flex items-center gap-2">
+                            <span className="text-sm text-muted-foreground">{role}:</span>
+                            <Badge variant="secondary">{count}</Badge>
+                          </div>
+                        ))}
+                      </div>
                     </CardContent>
                   </Card>
                 </div>
@@ -605,88 +607,90 @@ function UsersTable({ users, onViewProfile, onChangeRole, onStatusChange, onRese
 }) {
   return (
     <Card>
-      <CardContent className="pt-6">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>User Name</TableHead>
-              <TableHead>Role</TableHead>
-              <TableHead>Facility</TableHead>
-              <TableHead>Verification</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {users.map((user: User) => (
-              <TableRow key={user.id}>
-                <TableCell className="font-medium">{user.name}</TableCell>
-                <TableCell>{user.role === "Admin" ? "Medical Authority" : user.role}</TableCell>
-                <TableCell>{user.facilityName}</TableCell>
-                <TableCell>
-                  <Badge variant={user.verificationStatus === "Verified" ? "default" : "secondary"}>
-                    {user.verificationStatus}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <Badge variant={user.accountStatus === "Active" ? "default" : "destructive"}>
-                    {user.accountStatus}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={() => onViewProfile(user)}>
-                      <Eye className="h-4 w-4 mr-1" />
-                      View
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={() => onChangeRole(user)}>
-                      <Edit className="h-4 w-4 mr-1" />
-                      Role
-                    </Button>
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="outline" size="sm">
-                          {user.accountStatus === "Active" ? (
-                            <>
-                              <UserX className="h-4 w-4 mr-1" />
-                              Suspend
-                            </>
-                          ) : (
-                            <>
-                              <UserCheck className="h-4 w-4 mr-1" />
-                              Activate
-                            </>
-                          )}
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>
-                            {user.accountStatus === "Active" ? "Suspend User" : "Activate User"}
-                          </AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Are you sure you want to {user.accountStatus === "Active" ? "suspend" : "activate"} {user.name}?
-                            {user.accountStatus === "Active" && " This will prevent them from accessing the system."}
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction onClick={() => onStatusChange(user, user.accountStatus === "Active" ? "Suspended" : "Active")}>
-                            {user.accountStatus === "Active" ? "Suspend" : "Activate"}
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                    <Button variant="outline" size="sm" onClick={() => onResetPassword(user)}>
-                      <Key className="h-4 w-4 mr-1" />
-                      Reset
-                    </Button>
-                  </div>
-                </TableCell>
+      <CardContent className="pt-6 p-0">
+        <div className="overflow-x-auto">
+          <Table className="w-full">
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[18%]">User Name</TableHead>
+                <TableHead className="w-[12%]">Role</TableHead>
+                <TableHead className="w-[18%]">Facility</TableHead>
+                <TableHead className="w-[12%]">Verification</TableHead>
+                <TableHead className="w-[10%]">Status</TableHead>
+                <TableHead className="w-[30%]">Actions</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {users.map((user: User) => (
+                <TableRow key={user.id}>
+                  <TableCell className="font-medium">{user.name}</TableCell>
+                  <TableCell>{user.role === "Admin" ? "Medical Authority" : user.role}</TableCell>
+                  <TableCell>{user.facilityName}</TableCell>
+                  <TableCell>
+                    <Badge variant={user.verificationStatus === "Verified" ? "default" : "secondary"}>
+                      {user.verificationStatus}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={user.accountStatus === "Active" ? "default" : "destructive"}>
+                      {user.accountStatus}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm" onClick={() => onViewProfile(user)}>
+                        <Eye className="h-4 w-4 mr-1" />
+                        View
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => onChangeRole(user)}>
+                        <Edit className="h-4 w-4 mr-1" />
+                        Role
+                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="outline" size="sm">
+                            {user.accountStatus === "Active" ? (
+                              <>
+                                <UserX className="h-4 w-4 mr-1" />
+                                Suspend
+                              </>
+                            ) : (
+                              <>
+                                <UserCheck className="h-4 w-4 mr-1" />
+                                Activate
+                              </>
+                            )}
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>
+                              {user.accountStatus === "Active" ? "Suspend User" : "Activate User"}
+                            </AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Are you sure you want to {user.accountStatus === "Active" ? "suspend" : "activate"} {user.name}?
+                              {user.accountStatus === "Active" && " This will prevent them from accessing the system."}
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => onStatusChange(user, user.accountStatus === "Active" ? "Suspended" : "Active")}>
+                              {user.accountStatus === "Active" ? "Suspend" : "Activate"}
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                      <Button variant="outline" size="sm" onClick={() => onResetPassword(user)}>
+                        <Key className="h-4 w-4 mr-1" />
+                        Reset
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       </CardContent>
     </Card>
   )

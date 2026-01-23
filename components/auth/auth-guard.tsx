@@ -9,17 +9,22 @@ interface AuthGuardProps {
 }
 
 export function AuthGuard({ children }: AuthGuardProps) {
-  const { isAuthenticated } = useAuth()
+  const { isAuthenticated, isLoading } = useAuth()
   const router = useRouter()
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!isLoading && !isAuthenticated) {
       router.push("/login")
     }
-  }, [isAuthenticated, router])
+  }, [isAuthenticated, isLoading, router])
+
+  // Show nothing while checking auth state
+  if (isLoading) {
+    return null
+  }
 
   if (!isAuthenticated) {
-    return null // or a loading spinner
+    return null
   }
 
   return <>{children}</>
