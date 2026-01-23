@@ -32,6 +32,7 @@ import {
 } from "lucide-react"
 
 import type { InventoryItem, Transfer, Alert, ReorderItem, StockStatus } from "@/lib/types"
+import { addTransferRequest, emitTransferUpdated, type TransferRequest, type TransferRequestItem } from "@/lib/dms-storage"
 
 // -------------------- Mocked data (frontend-only) --------------------
 const mockInventory: InventoryItem[] = [
@@ -251,6 +252,33 @@ export default function UserDashboardPage() {
       toast.error("Select at least 1 item to create transfer request.")
       return
     }
+    
+    // Create transfer request items for storage
+    const transferItems: TransferRequestItem[] = itemsToUse.map((it) => ({
+      name: it.name,
+      batchNo: it.batch,
+      requestedQty: clamp(Math.max(5, Math.ceil(it.minThreshold / 2)), 5, 50),
+      currentQty: it.qty,
+      threshold: it.minThreshold,
+    }))
+
+    // Create the transfer request for persistent storage
+    const transferRequest: TransferRequest = {
+      id: `TRF-${Date.now()}`,
+      createdAt: new Date().toISOString(),
+      from: "Current Facility",
+      to: "Nearby Facility",
+      priority: itemsToUse.some(it => it.status === "critical") ? "Critical" : "Normal",
+      status: "Requested",
+      notes: `Transfer request for ${itemsToUse.length} item(s)`,
+      items: transferItems,
+    }
+
+    // Save to localStorage so it appears in Transfers page
+    addTransferRequest(transferRequest)
+    emitTransferUpdated()
+
+    // Also update local state for immediate UI feedback
     const newTransfers: Transfer[] = itemsToUse.map((it) => ({
       id: `t_${Date.now()}_${it.id}`,
       itemId: it.id,
@@ -260,7 +288,7 @@ export default function UserDashboardPage() {
       status: "pending",
     }))
     setTransfers((p) => [...p, ...newTransfers])
-    toast.success(`Created ${newTransfers.length} transfer request(s).`)
+    toast.success(`Created transfer request for ${itemsToUse.length} item(s). View in Transfers section.`)
     if (!items) setSelectedRows([])
   }
 
@@ -592,7 +620,12 @@ export default function UserDashboardPage() {
                                     <Checkbox checked={selectedRows.includes(item.id)} onCheckedChange={() => toggleSelect(item.id)} />
                                   </TableCell>
 
-                                  <TableCell className="font-medium">{item.name}</TableCell>
+                                  <TableCell 
+                                    className="font-medium cursor-pointer hover:text-primary"
+                                    onClick={() => toggleSelect(item.id)}
+                                  >
+                                    {item.name}
+                                  </TableCell>
                                   <TableCell>{item.category}</TableCell>
                                   <TableCell className="text-muted-foreground">{item.batch}</TableCell>
                                   <TableCell className="text-right">{item.qty}</TableCell>

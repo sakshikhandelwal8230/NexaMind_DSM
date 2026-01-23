@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Mail, Lock, Eye, EyeOff, LogIn } from "lucide-react"
 import { useAuth } from "@/app/providers/auth-context"
+import Link from "next/link"
 
 export function LoginForm() {
   const router = useRouter()
@@ -98,9 +99,9 @@ export function LoginForm() {
               <input type="checkbox" className="h-4 w-4 rounded border-input" />
               <span className="text-muted-foreground">Remember me</span>
             </label>
-            <a href="#" className="text-sm text-primary hover:underline">
+            <Link href="/forgot-password" className="text-sm text-primary hover:underline">
               Forgot password?
-            </a>
+            </Link>
           </div>
 
           <Button type="submit" className="w-full gap-2 bg-primary text-primary-foreground" disabled={isLoading}>

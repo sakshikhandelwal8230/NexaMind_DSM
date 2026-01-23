@@ -306,7 +306,12 @@ export function InventoryTable({ externalFilter, onSelectionChange }: InventoryT
                         onCheckedChange={(checked) => handleRowSelect(item.id, checked as boolean)}
                       />
                     </TableCell>
-                    <TableCell className="font-medium">{item.name}</TableCell>
+                    <TableCell 
+                      className="font-medium cursor-pointer hover:text-primary"
+                      onClick={() => handleRowSelect(item.id, !selectedRows.has(item.id))}
+                    >
+                      {item.name}
+                    </TableCell>
                     <TableCell>
                       <Badge className={statusConfig[item.status]}>
                         {item.status}
