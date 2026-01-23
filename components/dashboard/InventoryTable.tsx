@@ -307,7 +307,10 @@ export function InventoryTable({
                             onCheckedChange={(checked) => handleSelectItem(item.id, checked as boolean)}
                           />
                         </TableCell>
-                        <TableCell className="font-medium text-card-foreground">
+                        <TableCell 
+                          className="font-medium text-card-foreground cursor-pointer hover:text-primary"
+                          onClick={() => handleSelectItem(item.id, !isSelected)}
+                        >
                           {item.medicineName}
                         </TableCell>
                         <TableCell>

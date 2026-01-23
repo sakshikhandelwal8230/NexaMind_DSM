@@ -126,7 +126,7 @@ const priorityColors = {
 
 export default function TransfersPage() {
   const { searchQuery } = useSearch()
-  const [isAdmin] = useState(true)
+  const [isAdmin] = useState(false)
   const [transfers, setTransfers] = useState<DisplayTransfer[]>([])
   const [mockTransfersData] = useState(mockTransfers) // Keep for fallback
 
@@ -417,60 +417,60 @@ export default function TransfersPage() {
                   <CardHeader>
                     <CardTitle>Active Transfers</CardTitle>
                   </CardHeader>
-                  <CardContent>
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>ID</TableHead>
-                          <TableHead>Date</TableHead>
-                          <TableHead>Medicine</TableHead>
-                          <TableHead>Qty</TableHead>
-                          <TableHead>From</TableHead>
-                          <TableHead>To</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Priority</TableHead>
-                          <TableHead>ETA</TableHead>
-                          <TableHead>Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {activeTransfers.length === 0 ? (
+                  <CardContent className="p-0">
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
                           <TableRow>
-                            <TableCell colSpan={10} className="text-center py-4">
-                              No results found
-                            </TableCell>
+                            <TableHead className="w-[100px]">ID</TableHead>
+                            <TableHead className="w-[100px]">Date</TableHead>
+                            <TableHead className="min-w-[120px]">Medicine</TableHead>
+                            <TableHead className="w-[60px] text-center">Qty</TableHead>
+                            <TableHead className="min-w-[130px]">From</TableHead>
+                            <TableHead className="min-w-[130px]">To</TableHead>
+                            <TableHead className="w-[100px]">Status</TableHead>
+                            <TableHead className="w-[90px]">Priority</TableHead>
+                            <TableHead className="w-[120px]">Actions</TableHead>
                           </TableRow>
-                        ) : (
-                          activeTransfers.map(t => (
-                            <TableRow key={t.id}>
-                              <TableCell>{t.id}</TableCell>
-                              <TableCell>{t.date}</TableCell>
-                              <TableCell>{t.medicine}</TableCell>
-                              <TableCell>{t.quantity}</TableCell>
-                              <TableCell>{t.fromFacility}</TableCell>
-                              <TableCell>{t.toFacility}</TableCell>
-                              <TableCell>
-                                <Badge className={statusColors[t.status as keyof typeof statusColors]}>
-                                  {t.status}
-                                </Badge>
-                              </TableCell>
-                              <TableCell>
-                                <Badge className={priorityColors[t.priority as keyof typeof priorityColors]}>
-                                  {t.priority}
-                                </Badge>
-                              </TableCell>
-                              <TableCell>{t.ETA}</TableCell>
-                              <TableCell>
-                                <Button variant="outline" size="sm" onClick={() => openDetailsDialog(t)}>
-                                  <Eye className="mr-2 h-4 w-4" />
-                                  View Details
-                                </Button>
+                        </TableHeader>
+                        <TableBody>
+                          {activeTransfers.length === 0 ? (
+                            <TableRow>
+                              <TableCell colSpan={9} className="text-center py-4">
+                                No results found
                               </TableCell>
                             </TableRow>
-                          ))
-                        )}
-                      </TableBody>
-                    </Table>
+                          ) : (
+                            activeTransfers.map(t => (
+                              <TableRow key={t.id}>
+                                <TableCell className="font-mono text-sm">{t.id}</TableCell>
+                                <TableCell className="text-sm">{t.date}</TableCell>
+                                <TableCell className="font-medium">{t.medicine}</TableCell>
+                                <TableCell className="text-center">{t.quantity}</TableCell>
+                                <TableCell className="text-sm">{t.fromFacility}</TableCell>
+                                <TableCell className="text-sm">{t.toFacility}</TableCell>
+                                <TableCell>
+                                  <Badge className={statusColors[t.status as keyof typeof statusColors]}>
+                                    {t.status}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge className={priorityColors[t.priority as keyof typeof priorityColors]}>
+                                    {t.priority}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>
+                                  <Button variant="outline" size="sm" onClick={() => openDetailsDialog(t)}>
+                                    <Eye className="mr-2 h-4 w-4" />
+                                    Details
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            ))
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
                   </CardContent>
                 </Card>
               </TabsContent>
@@ -479,60 +479,60 @@ export default function TransfersPage() {
                   <CardHeader>
                     <CardTitle>Delivered Transfers</CardTitle>
                   </CardHeader>
-                  <CardContent>
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>ID</TableHead>
-                          <TableHead>Date</TableHead>
-                          <TableHead>Medicine</TableHead>
-                          <TableHead>Qty</TableHead>
-                          <TableHead>From</TableHead>
-                          <TableHead>To</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Priority</TableHead>
-                          <TableHead>ETA</TableHead>
-                          <TableHead>Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {deliveredTransfers.length === 0 ? (
+                  <CardContent className="p-0">
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
                           <TableRow>
-                            <TableCell colSpan={10} className="text-center py-4">
-                              No results found
-                            </TableCell>
+                            <TableHead className="w-[100px]">ID</TableHead>
+                            <TableHead className="w-[100px]">Date</TableHead>
+                            <TableHead className="min-w-[120px]">Medicine</TableHead>
+                            <TableHead className="w-[60px] text-center">Qty</TableHead>
+                            <TableHead className="min-w-[130px]">From</TableHead>
+                            <TableHead className="min-w-[130px]">To</TableHead>
+                            <TableHead className="w-[100px]">Status</TableHead>
+                            <TableHead className="w-[90px]">Priority</TableHead>
+                            <TableHead className="w-[120px]">Actions</TableHead>
                           </TableRow>
-                        ) : (
-                          deliveredTransfers.map(t => (
-                            <TableRow key={t.id}>
-                              <TableCell>{t.id}</TableCell>
-                              <TableCell>{t.date}</TableCell>
-                              <TableCell>{t.medicine}</TableCell>
-                              <TableCell>{t.quantity}</TableCell>
-                              <TableCell>{t.fromFacility}</TableCell>
-                              <TableCell>{t.toFacility}</TableCell>
-                              <TableCell>
-                                <Badge className={statusColors[t.status as keyof typeof statusColors]}>
-                                  {t.status}
-                                </Badge>
-                              </TableCell>
-                              <TableCell>
-                                <Badge className={priorityColors[t.priority as keyof typeof priorityColors]}>
-                                  {t.priority}
-                                </Badge>
-                              </TableCell>
-                              <TableCell>{t.ETA}</TableCell>
-                              <TableCell>
-                                <Button variant="outline" size="sm" onClick={() => openDetailsDialog(t)}>
-                                  <Eye className="mr-2 h-4 w-4" />
-                                  View Details
-                                </Button>
+                        </TableHeader>
+                        <TableBody>
+                          {deliveredTransfers.length === 0 ? (
+                            <TableRow>
+                              <TableCell colSpan={9} className="text-center py-4">
+                                No results found
                               </TableCell>
                             </TableRow>
-                          ))
-                        )}
-                      </TableBody>
-                    </Table>
+                          ) : (
+                            deliveredTransfers.map(t => (
+                              <TableRow key={t.id}>
+                                <TableCell className="font-mono text-sm">{t.id}</TableCell>
+                                <TableCell className="text-sm">{t.date}</TableCell>
+                                <TableCell className="font-medium">{t.medicine}</TableCell>
+                                <TableCell className="text-center">{t.quantity}</TableCell>
+                                <TableCell className="text-sm">{t.fromFacility}</TableCell>
+                                <TableCell className="text-sm">{t.toFacility}</TableCell>
+                                <TableCell>
+                                  <Badge className={statusColors[t.status as keyof typeof statusColors]}>
+                                    {t.status}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge className={priorityColors[t.priority as keyof typeof priorityColors]}>
+                                    {t.priority}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>
+                                  <Button variant="outline" size="sm" onClick={() => openDetailsDialog(t)}>
+                                    <Eye className="mr-2 h-4 w-4" />
+                                    Details
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            ))
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
                   </CardContent>
                 </Card>
               </TabsContent>
