@@ -34,7 +34,7 @@ export function DashboardSidebar({ isAdmin = false }: SidebarProps) {
     pathname === "/dashboard/admin/users"
 
   const adminLinks = [
-    { href: "/dashboard/admin", label: "Overview", icon: LayoutDashboard },
+    { href: "/dashboard/user", label: "Overview", icon: LayoutDashboard },
     { href: "/inventory", label: "Inventory", icon: Package },
     { href: "/alerts", label: "Alerts", icon: AlertTriangle },
     { href: "/transfers", label: "Transfers", icon: Truck, hasChildren: true },
