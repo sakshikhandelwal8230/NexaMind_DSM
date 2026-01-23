@@ -35,6 +35,33 @@ interface Medicine {
   batchNumber: string
 }
 
+interface FormFieldProps {
+  id: string
+  label: string
+  type?: string
+  value: string
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void
+  placeholder?: string
+  error?: string
+}
+
+// Move FormField outside component to prevent remounting on each parent render
+const FormField = (props: FormFieldProps) => (
+  <div className="grid gap-2">
+    <Label htmlFor={props.id}>{props.label}</Label>
+    <Input
+      id={props.id}
+      type={props.type || "text"}
+      value={props.value}
+      onChange={props.onChange}
+      placeholder={props.placeholder}
+      className={props.error ? "border-destructive" : ""}
+      min={props.type === "number" ? 0 : undefined}
+    />
+    {props.error && <p className="text-xs text-destructive">{props.error}</p>}
+  </div>
+)
+
 const initialMedicines: Medicine[] = [
   {
     id: "1",
@@ -253,30 +280,6 @@ function InventoryContent() {
     critical: medicines.filter((m) => getStockStatus(m.currentStock, m.minThreshold) === "critical").length,
   }
 
-  const FormField = (props: {
-    id: string
-    label: string
-    type?: string
-    value: string
-    onChange: (e: React.ChangeEvent<HTMLInputElement>) => void
-    placeholder?: string
-    error?: string
-  }) => (
-    <div className="grid gap-2">
-      <Label htmlFor={props.id}>{props.label}</Label>
-      <Input
-        id={props.id}
-        type={props.type || "text"}
-        value={props.value}
-        onChange={props.onChange}
-        placeholder={props.placeholder}
-        className={props.error ? "border-destructive" : ""}
-        min={props.type === "number" ? 0 : undefined}
-      />
-      {props.error && <p className="text-xs text-destructive">{props.error}</p>}
-    </div>
-  )
-
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       <DashboardSidebar />
@@ -362,7 +365,7 @@ function InventoryContent() {
                   Add Medicine
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-[425px]">
+              <DialogContent className="sm:max-w-[425px]" onOpenAutoFocus={(e) => e.preventDefault()}>
                 <DialogHeader>
                   <DialogTitle>Add New Medicine</DialogTitle>
                   <DialogDescription>
@@ -374,7 +377,7 @@ function InventoryContent() {
                     id="name"
                     label="Medicine Name *"
                     value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
                     placeholder="e.g., Paracetamol 500mg"
                   />
                   <div className="grid gap-2">
@@ -382,7 +385,7 @@ function InventoryContent() {
                     <Select
                       value={formData.category}
                       onValueChange={(value: "OTC" | "Prescription") =>
-                        setFormData({ ...formData, category: value })
+                        setFormData((prev) => ({ ...prev, category: value }))
                       }
                     >
                       <SelectTrigger>
@@ -400,7 +403,7 @@ function InventoryContent() {
                       label="Quantity *"
                       type="number"
                       value={formData.currentStock}
-                      onChange={(e) => setFormData({ ...formData, currentStock: e.target.value })}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, currentStock: e.target.value }))}
                       placeholder="0"
                     />
                     <FormField
@@ -408,7 +411,7 @@ function InventoryContent() {
                       label="Min Threshold *"
                       type="number"
                       value={formData.minThreshold}
-                      onChange={(e) => setFormData({ ...formData, minThreshold: e.target.value })}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, minThreshold: e.target.value }))}
                       placeholder="0"
                     />
                   </div>
@@ -417,13 +420,13 @@ function InventoryContent() {
                     label="Expiry Date *"
                     type="date"
                     value={formData.expiryDate}
-                    onChange={(e) => setFormData({ ...formData, expiryDate: e.target.value })}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, expiryDate: e.target.value }))}
                   />
                   <FormField
                     id="batch"
                     label="Batch Number *"
                     value={formData.batchNumber}
-                    onChange={(e) => setFormData({ ...formData, batchNumber: e.target.value })}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, batchNumber: e.target.value }))}
                     placeholder="e.g., PCM-2024-001"
                   />
                 </div>
