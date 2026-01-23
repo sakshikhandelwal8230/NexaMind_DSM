@@ -17,7 +17,6 @@ export function Navbar() {
     { href: "/", label: "Home" },
     { href: "#about", label: "About" },
     { href: "#how-it-works", label: "How It Works" },
-    ...((isAuthenticated || pathname.startsWith("/dashboard")) ? [{ href: "/dashboard", label: "Dashboard" }] : []),
   ]
 
   const isSecurityPage = pathname.includes("security")

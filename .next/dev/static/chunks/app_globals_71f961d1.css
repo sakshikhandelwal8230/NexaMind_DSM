@@ -2093,6 +2093,10 @@
     }
   }
 
+  .border-current {
+    border-color: currentColor;
+  }
+
   .border-destructive {
     border-color: var(--destructive);
   }
@@ -6040,6 +6044,10 @@
     .dark\:bg-destructive\/60:is(.dark *) {
       background-color: color-mix(in oklab, var(--destructive) 60%, transparent);
     }
+  }
+
+  .dark\:bg-green-900:is(.dark *) {
+    background-color: var(--color-green-900);
   }
 
   .dark\:bg-green-900\/40:is(.dark *) {
