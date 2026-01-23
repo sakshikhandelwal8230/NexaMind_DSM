@@ -5,6 +5,10 @@ import { Providers } from "./providers"
 export const metadata: Metadata = {
   title: "Drug Supply Monitor",
   description: "Government-authorized platform to prevent drug shortages",
+  icons: {
+    icon: "/icon.svg",
+    apple: "/apple-icon.png",
+  },
 }
 
 export default function RootLayout({
