@@ -237,13 +237,13 @@ export default function TransfersPage() {
 
   return (
     <AuthGuard>
-      <div className="flex h-screen">
+      <div className="flex h-screen overflow-hidden bg-background">
         <DashboardSidebar isAdmin={isAdmin} />
 
-        <div className="flex flex-1 flex-col">
-          <DashboardHeader title="Inter-Facility Transfers" />
+        <div className="flex flex-1 flex-col overflow-hidden">
+          <DashboardHeader title="Inter-Facility Transfers" searchPlaceholder="Search transfers..." />
 
-          <main className="p-6 space-y-6">
+          <main className="flex-1 overflow-y-auto p-6 space-y-6">
             {/* KPI CARDS */}
             <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
               <Card>

@@ -440,6 +440,84 @@ function InventoryContent() {
                 </DialogFooter>
               </DialogContent>
             </Dialog>
+
+            {/* Edit Dialog */}
+            <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+              <DialogContent className="sm:max-w-[425px]" onOpenAutoFocus={(e) => e.preventDefault()}>
+                <DialogHeader>
+                  <DialogTitle>Edit Medicine</DialogTitle>
+                  <DialogDescription>
+                    Update the details for this medicine. All fields are required.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <FormField
+                    id="edit-name"
+                    label="Medicine Name *"
+                    value={formData.name}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
+                    placeholder="e.g., Paracetamol 500mg"
+                  />
+                  <div className="grid gap-2">
+                    <Label htmlFor="edit-category">Category *</Label>
+                    <Select
+                      value={formData.category}
+                      onValueChange={(value: "OTC" | "Prescription") =>
+                        setFormData((prev) => ({ ...prev, category: value }))
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="OTC">OTC (Over The Counter)</SelectItem>
+                        <SelectItem value="Prescription">Prescription Only</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      id="edit-stock"
+                      label="Quantity *"
+                      type="number"
+                      value={formData.currentStock}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, currentStock: e.target.value }))}
+                      placeholder="0"
+                    />
+                    <FormField
+                      id="edit-threshold"
+                      label="Min Threshold *"
+                      type="number"
+                      value={formData.minThreshold}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, minThreshold: e.target.value }))}
+                      placeholder="0"
+                    />
+                  </div>
+                  <FormField
+                    id="edit-expiry"
+                    label="Expiry Date *"
+                    type="date"
+                    value={formData.expiryDate}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, expiryDate: e.target.value }))}
+                  />
+                  <FormField
+                    id="edit-batch"
+                    label="Batch Number *"
+                    value={formData.batchNumber}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, batchNumber: e.target.value }))}
+                    placeholder="e.g., PCM-2024-001"
+                  />
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button onClick={handleEditMedicine} disabled={!isFormValid}>
+                    Save Changes
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </div>
 
           {/* Inventory Table */}
@@ -493,7 +571,7 @@ function InventoryContent() {
 
                       return (
                         <TableRow key={med.id} className={highlightClass}>
-                          <TableCell className="text-slate-800 dark:text-slate-100">{med.name}</TableCell>
+                          <TableCell className="text-slate-800 dark:text-slate-100 font-bold">{med.name}</TableCell>
                           <TableCell className="text-slate-800 dark:text-slate-100">{med.category}</TableCell>
                           <TableCell className="text-slate-800 dark:text-slate-100">{med.batchNumber}</TableCell>
                           <TableCell className="text-right text-slate-800 dark:text-slate-100">{med.currentStock}</TableCell>

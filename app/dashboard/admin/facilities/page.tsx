@@ -4,6 +4,7 @@ import { useState } from "react"
 import { DashboardSidebar } from "@/components/dashboard/sidebar"
 import { DashboardHeader } from "@/components/dashboard/dashboard-header"
 import { AuthGuard } from "@/components/auth/auth-guard"
+import { useSearch } from "@/app/providers/search-context"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
@@ -105,6 +106,7 @@ const overviewStats = [
 ]
 
 export default function FacilitiesPage() {
+  const { searchQuery } = useSearch()
   const [filters, setFilters] = useState({
     zone: "all",
     type: "all",
@@ -114,6 +116,8 @@ export default function FacilitiesPage() {
   const [sendUnits, setSendUnits] = useState<Record<number, number>>({})
 
   const filteredFacilities = facilities.filter(facility => {
+    // Search filter
+    if (searchQuery && !facility.name.toLowerCase().includes(searchQuery.toLowerCase())) return false
     if (filters.zone !== "all" && facility.zone !== filters.zone) return false
     if (filters.type !== "all" && facility.type !== filters.type) return false
     if (filters.stockHealth !== "all" && facility.stockHealth !== filters.stockHealth) return false
@@ -165,6 +169,7 @@ export default function FacilitiesPage() {
           <DashboardHeader
             title="Facilities Management"
             subtitle="Manage hospitals, pharmacies, and medical facilities participating in drug supply transfers"
+            searchPlaceholder="Search facilities..."
           />
           <main className="flex-1 overflow-y-auto p-6">
             <div className="space-y-6">

@@ -33,6 +33,7 @@ import {
 
 import type { InventoryItem, Transfer, Alert, ReorderItem, StockStatus } from "@/lib/types"
 import { addTransferRequest, emitTransferUpdated, type TransferRequest, type TransferRequestItem } from "@/lib/dms-storage"
+import { useSearch } from "@/app/providers/search-context"
 
 // -------------------- Mocked data (frontend-only) --------------------
 const mockInventory: InventoryItem[] = [
@@ -115,13 +116,13 @@ function trendBadge(delta: number) {
 
 // -------------------- Page --------------------
 export default function UserDashboardPage() {
+  const { searchQuery, setSearchQuery } = useSearch()
   const [inventory, setInventory] = useState<InventoryItem[]>(mockInventory)
   const [transfers, setTransfers] = useState<Transfer[]>(mockTransfers)
   const [alerts, setAlerts] = useState<Alert[]>(mockAlerts)
   const [reorderQueue, setReorderQueue] = useState<ReorderItem[]>(mockReorderQueue)
 
   const [selectedRows, setSelectedRows] = useState<string[]>([])
-  const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState<StockStatus | "all">("all")
   const [categoryFilter, setCategoryFilter] = useState<"OTC" | "Prescription" | "all">("all")
   const [expiryFilter, setExpiryFilter] = useState<"30" | "60" | "90" | "all">("all")
@@ -162,7 +163,7 @@ export default function UserDashboardPage() {
   }, [inventory, transfers, reorderQueue, expiringCount])
 
   const filteredInventory = useMemo(() => {
-    const term = searchTerm.trim().toLowerCase()
+    const term = searchQuery.trim().toLowerCase()
 
     let list = inventory.filter((item) => {
       const matchesSearch =
@@ -207,7 +208,7 @@ export default function UserDashboardPage() {
     })
 
     return list
-  }, [inventory, searchTerm, statusFilter, categoryFilter, expiryFilter, sortBy, sortOrder, kpiFilter])
+  }, [inventory, searchQuery, statusFilter, categoryFilter, expiryFilter, sortBy, sortOrder, kpiFilter])
 
   const health = useMemo(() => {
     const available = inventory.filter((i) => i.status === "available").length
@@ -365,7 +366,7 @@ export default function UserDashboardPage() {
         </div>
 
         <div className="flex-1 flex flex-col min-h-screen">
-          <DashboardHeader title="Facility Dashboard" subtitle="Medicine supply command center" />
+          <DashboardHeader title="Facility Dashboard" subtitle="Medicine supply command center" hideSearch />
 
           <main className="flex-1 overflow-y-auto p-4 md:p-6">
             <div className="grid h-full min-h-0 gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
@@ -494,8 +495,8 @@ export default function UserDashboardPage() {
                       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                         <Input
                           placeholder="Search medicines..."
-                          value={searchTerm}
-                          onChange={(e) => setSearchTerm(e.target.value)}
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
                           className="sm:w-[280px]"
                         />
 

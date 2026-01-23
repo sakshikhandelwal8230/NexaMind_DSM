@@ -331,6 +331,7 @@ export default function UsersPage() {
           <DashboardHeader
             title="Users Management"
             subtitle="Medical Authority can manage system users (hospital staff, pharmacists, medical authorities)"
+            searchPlaceholder="Search users..."
           />
           <main className="flex-1 overflow-y-auto p-6">
             <div className="space-y-6">

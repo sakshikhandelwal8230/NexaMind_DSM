@@ -17,6 +17,8 @@ interface DashboardHeaderProps {
   // optional controlled search
   searchValue?: string
   onSearchChange?: (value: string) => void
+  hideSearch?: boolean
+  searchPlaceholder?: string
 }
 
 interface Alert {
@@ -26,7 +28,7 @@ interface Alert {
   message: string
 }
 
-export function DashboardHeader({ title, subtitle, searchValue, onSearchChange }: DashboardHeaderProps) {
+export function DashboardHeader({ title, subtitle, searchValue, onSearchChange, hideSearch, searchPlaceholder }: DashboardHeaderProps) {
   const { searchQuery, setSearchQuery } = useSearch()
   const [alertsOpen, setAlertsOpen] = useState(false)
 
@@ -87,15 +89,17 @@ export function DashboardHeader({ title, subtitle, searchValue, onSearchChange }
       </div>
 
       <div className="flex items-center gap-4">
-        <div className="relative hidden md:block">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={effectiveSearchValue}
-            onChange={(e) => handleSearchChange(e.target.value)}
-            placeholder="Search medicines..."
-            className="w-64 pl-9"
-          />
-        </div>
+        {!hideSearch && (
+          <div className="relative hidden md:block">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={effectiveSearchValue}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              placeholder={searchPlaceholder || "Search medicines..."}
+              className="w-64 pl-9"
+            />
+          </div>
+        )}
 
         <DashboardThemeToggle />
 

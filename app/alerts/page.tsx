@@ -163,9 +163,7 @@ export default function AlertsPage() {
     <div className="flex h-screen overflow-hidden bg-background">
       <DashboardSidebar />
       <div className="flex flex-1 flex-col overflow-hidden">
-        <DashboardHeader title="Alerts & Notifications" subtitle="Monitor real-time medicine shortage alerts" searchValue={""} onSearchChange={function (value: string): void {
-          throw new Error("Function not implemented.")
-        } } />
+        <DashboardHeader title="Alerts & Notifications" subtitle="Monitor real-time medicine shortage alerts" />
         <main className="flex-1 overflow-y-auto p-6">
           {emergencyMode && (
             <div className="mb-6 flex items-center gap-4 rounded-lg border-2 border-red-500 bg-red-500/10 p-4 shadow-lg shadow-red-500/20">
