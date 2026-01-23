@@ -14,7 +14,7 @@ interface StatItem {
 const statsData: StatItem[] = [
   {
     id: "facilities",
-    value: 5000,
+    value: 500,
     label: "Registered Facilities",
     suffix: "+",
     icon: Building2,

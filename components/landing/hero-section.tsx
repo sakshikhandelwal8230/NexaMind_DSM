@@ -55,7 +55,7 @@ export function HeroSection() {
             <Button
               size="lg"
               variant="outline"
-              className="h-12 border-gray-400 px-8 text-gray-800 hover:bg-gray-100 dark:border-gray-500 dark:text-gray-200 dark:hover:bg-white/10"
+              className="h-12 border-gray-400 px-8 text-gray-800 hover:bg-gray-100 hover:text-teal-600 dark:border-gray-500 dark:text-gray-200 dark:hover:bg-white/10 dark:hover:text-teal-600"
               asChild
             >
               <Link href="/login">Login to Dashboard</Link>
