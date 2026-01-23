@@ -142,6 +142,7 @@ export default function UserDashboardPage() {
   const [alertTab, setAlertTab] = useState<"all" | "critical" | "low_stock" | "expiring">("all")
   const [openDetailsId, setOpenDetailsId] = useState<string | null>(null)
   const [kpiModal, setKpiModal] = useState<null | "total" | "low" | "critical" | "expiring" | "transfers" | "reorder">(null)
+  const [showAllTotalItems, setShowAllTotalItems] = useState(false)
 
   const expiringCount = useMemo(() => {
     return inventory.filter((i) => daysUntil(i.expiryDate) <= expiringWindow).length
@@ -824,7 +825,7 @@ export default function UserDashboardPage() {
         </div>
 
         {/* KPI Modal */}
-        <Dialog open={!!kpiModal} onOpenChange={(o) => (o ? null : setKpiModal(null))}>
+        <Dialog open={!!kpiModal} onOpenChange={(o) => { if (!o) { setKpiModal(null); setShowAllTotalItems(false); } }}>
           <DialogContent className="max-w-2xl max-h-[60vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
@@ -848,7 +849,7 @@ export default function UserDashboardPage() {
             <div className="space-y-4">
               {kpiModal === "total" && (
                 <div className="space-y-2">
-                  {inventory.slice(0, 10).map((item) => (
+                  {inventory.slice(0, showAllTotalItems ? inventory.length : 10).map((item) => (
                     <div key={item.id} className="flex items-center justify-between p-3 border rounded">
                       <div className="flex items-center gap-3">
                         <div className="font-medium">{item.name}</div>
@@ -859,8 +860,23 @@ export default function UserDashboardPage() {
                       <div className="text-sm text-muted-foreground">{item.expiryDate}</div>
                     </div>
                   ))}
-                  {inventory.length > 10 && (
-                    <p className="text-sm text-muted-foreground text-center">... and {inventory.length - 10} more items</p>
+                  {inventory.length > 10 && !showAllTotalItems && (
+                    <Button
+                      variant="ghost"
+                      className="w-full text-sm text-muted-foreground hover:text-foreground"
+                      onClick={() => setShowAllTotalItems(true)}
+                    >
+                      ... and {inventory.length - 10} more items (click to show all)
+                    </Button>
+                  )}
+                  {showAllTotalItems && inventory.length > 10 && (
+                    <Button
+                      variant="ghost"
+                      className="w-full text-sm text-muted-foreground hover:text-foreground"
+                      onClick={() => setShowAllTotalItems(false)}
+                    >
+                      Show less
+                    </Button>
                   )}
                 </div>
               )}
@@ -1033,8 +1049,12 @@ export default function UserDashboardPage() {
 
                   <Button
                     onClick={() => {
-                      // demo action
-                      toast.success("Action queued (demo).")
+                      // Resolve any alerts related to this item
+                      const itemId = detailsItem?.id
+                      if (itemId) {
+                        setAlerts((prev) => prev.map((a) => (a.itemId === itemId ? { ...a, resolved: true } : a)))
+                      }
+                      toast.success("Action taken successfully.")
                       setOpenDetailsId(null)
                     }}
                   >
