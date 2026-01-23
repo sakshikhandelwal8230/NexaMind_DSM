@@ -23,15 +23,15 @@ const impactData: ImpactItem[] = [
   },
   {
     id: "citizens",
-    value: 2000000,
-    suffix: "M+",
+    value: 3000,
+    suffix: "+",
     label: "Citizens Impacted",
     description: "People benefiting from improved medicine availability in their region",
     icon: Users,
   },
   {
     id: "districts",
-    value: 500,
+    value: 50,
     suffix: "+",
     label: "Districts Covered",
     description: "Geographic spread ensuring nationwide healthcare coverage",
@@ -39,8 +39,8 @@ const impactData: ImpactItem[] = [
   },
   {
     id: "shortages",
-    value: 10000,
-    suffix: "K+",
+    value: 5000,
+    suffix: "+",
     label: "Shortages Prevented",
     description: "Critical alerts that enabled proactive inventory management",
     icon: AlertTriangle,
@@ -97,7 +97,7 @@ export function ImpactSection() {
   const formatValue = (value: number, suffix: string) => {
     if (suffix === "M+") return `${Math.floor(value / 1_000_000)}M+`
     if (suffix === "K+") return `${Math.floor(value / 1_000)}K+`
-    return `${value}${suffix}`
+    return `${value.toLocaleString()}${suffix}`
   }
 
   return (

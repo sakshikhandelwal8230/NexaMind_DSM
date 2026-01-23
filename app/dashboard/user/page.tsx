@@ -755,7 +755,7 @@ export default function UserDashboardPage() {
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <Sparkles className="h-4 w-4 text-muted-foreground" />
-                          <p className="text-sm font-medium">AI Insights (demo)</p>
+                          <p className="text-sm font-medium">AI Insights</p>
                         </div>
                         <Button size="sm" onClick={generateInsights} disabled={isGeneratingInsights}>
                           {isGeneratingInsights ? "Generating..." : "Generate"}
