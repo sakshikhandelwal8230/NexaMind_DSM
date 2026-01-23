@@ -1,6 +1,0 @@
-{
-  "version": 3,
-  "sources": [],
-  "sections": [
-    {"offset": {"line": 14, "column": 0}, "map": {"version":3,"sources":["file:///C:/Users/shubh/OneDrive/Desktop/Hackathon/Drug-Monitor-System-DMS-/app/page.tsx"],"sourcesContent":["import { Navbar } from \"@/components/navbar\"\r\nimport { Footer } from \"@/components/footer\"\r\nimport { HeroSection } from \"@/components/landing/hero-section\"\r\nimport { StatsSection } from \"@/components/landing/stats-section\"\r\nimport { FeaturesSection } from \"@/components/landing/features-section\"\r\nimport { HowItWorksSection } from \"@/components/landing/how-it-works-section\"\r\nimport { ImpactSection } from \"@/components/landing/impact-section\"\r\n\r\nexport default function HomePage() {\r\n  return (\r\n    <div className=\"flex min-h-screen flex-col\">\r\n      <Navbar />\r\n      <main className=\"flex-1\">\r\n        <HeroSection />\r\n        <StatsSection />\r\n        <FeaturesSection />\r\n        <HowItWorksSection />\r\n        <ImpactSection />\r\n      </main>\r\n      <Footer />\r\n    </div>\r\n  )\r\n}\r\n"],"names":[],"mappings":";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;AAQe,SAAS;IACtB,qBACE,qOAAC;QAAI,WAAU;;0BACb,oOAAC;0BACD,qOAAC;gBAAK,WAAU;;kCACd,oOAAC;kCACD,oOAAC;kCACD,oOAAC;kCACD,oOAAC;kCACD,oOAAC;;;0BAEH,oOAAC;;;AAGP"}}]
-}
