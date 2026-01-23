@@ -28,13 +28,18 @@ export function DashboardSidebar({ isAdmin = false }: SidebarProps) {
   const pathname = usePathname()
   const [isCollapsed, setIsCollapsed] = useState(false)
 
+  // Check if current path is transfers or its sub-sections
+  const isTransfersSection = pathname === "/transfers" || 
+    pathname === "/dashboard/admin/facilities" || 
+    pathname === "/dashboard/admin/users"
+
   const adminLinks = [
     { href: "/dashboard/admin", label: "Overview", icon: LayoutDashboard },
     { href: "/inventory", label: "Inventory", icon: Package },
     { href: "/alerts", label: "Alerts", icon: AlertTriangle },
-    { href: "/transfers", label: "Transfers", icon: Truck },
-    { href: "/dashboard/admin/facilities", label: "Facilities", icon: Building2 },
-    { href: "/dashboard/admin/users", label: "Users", icon: Users },
+    { href: "/transfers", label: "Transfers", icon: Truck, hasChildren: true },
+    { href: "/dashboard/admin/facilities", label: "Facilities", icon: Building2, isChild: true, parent: "/transfers" },
+    { href: "/dashboard/admin/users", label: "Users", icon: Users, isChild: true, parent: "/transfers" },
     { href: "/security", label: "Security", icon: Shield },
     { href: "/dashboard/settings", label: "Settings", icon: Settings },
   ]
@@ -77,8 +82,16 @@ export function DashboardSidebar({ isAdmin = false }: SidebarProps) {
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto p-3">
         <ul className="space-y-1">
-          {links.map((link) => {
+          {links.map((link: any) => {
             const isActive = pathname === link.href
+            const isChildLink = link.isChild
+            const showChild = isChildLink && isTransfersSection
+
+            // Hide child links when not in transfers section
+            if (isChildLink && !isTransfersSection) {
+              return null
+            }
+
             return (
               <li key={link.href}>
                 <Link
@@ -88,6 +101,8 @@ export function DashboardSidebar({ isAdmin = false }: SidebarProps) {
                     isActive
                       ? "bg-sidebar-accent text-sidebar-accent-foreground"
                       : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground",
+                    // Indent child items
+                    isChildLink && !isCollapsed && "ml-4 pl-4 border-l-2 border-sidebar-border",
                   )}
                   title={isCollapsed ? link.label : undefined}
                 >
