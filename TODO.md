@@ -1,0 +1,5 @@
+- [ ] Update outer div className to "flex min-h-screen bg-background"
+- [ ] Update grid className to "grid h-full min-h-0 gap-6 lg:grid-cols-[minmax(0,1fr)_360px]"
+- [ ] Add lg:sticky lg:top-6 self-start to right column div
+- [ ] Wrap Table in <div className="overflow-x-auto">
+- [ ] Adjust button div classes for controls and bulk actions
