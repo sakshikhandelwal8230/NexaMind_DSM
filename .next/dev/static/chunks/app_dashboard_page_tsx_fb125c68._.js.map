@@ -1,0 +1,6 @@
+{
+  "version": 3,
+  "sources": [],
+  "sections": [
+    {"offset": {"line": 4, "column": 0}, "map": {"version":3,"sources":["file:///C:/Users/shubh/OneDrive/Desktop/Hackathon/Drug-Monitor-System-DMS-/app/dashboard/page.tsx"],"sourcesContent":["\"use client\"\r\n\r\nimport { useEffect } from \"react\"\r\nimport { useRouter } from \"next/navigation\"\r\nimport { useAuth } from \"@/app/providers/auth-context\"\r\n\r\nexport default function DashboardPage() {\r\n  const { isAuthenticated } = useAuth()\r\n  const router = useRouter()\r\n\r\n  useEffect(() => {\r\n    if (!isAuthenticated) {\r\n      router.push(\"/login\")\r\n    } else {\r\n      router.push(\"/dashboard/admin\")\r\n    }\r\n  }, [isAuthenticated, router])\r\n\r\n  return null\r\n}\r\n"],"names":[],"mappings":";;;;AAEA;AACA;AACA;;AAJA;;;;AAMe,SAAS;;IACtB,MAAM,EAAE,eAAe,EAAE,GAAG,IAAA,kJAAO;IACnC,MAAM,SAAS,IAAA,kJAAS;IAExB,IAAA,0KAAS;mCAAC;YACR,IAAI,CAAC,iBAAiB;gBACpB,OAAO,IAAI,CAAC;YACd,OAAO;gBACL,OAAO,IAAI,CAAC;YACd;QACF;kCAAG;QAAC;QAAiB;KAAO;IAE5B,OAAO;AACT;GAbwB;;QACM,kJAAO;QACpB,kJAAS;;;KAFF"}}]
+}
