@@ -16,7 +16,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
 import { useToast } from "@/hooks/use-toast"
 import { Users, UserCheck, Shield, Eye, Edit, UserX, Key, Activity, AlertTriangle, Copy, MessageSquare, TrendingUp, TrendingDown, Search, Filter } from "lucide-react"
-import { useSearch } from "@/app/providers/search-context"
 
 interface User {
   id: number;
@@ -200,7 +199,7 @@ const initialUsers: User[] = [
 ]
 
 export default function UsersPage() {
-  const { searchQuery } = useSearch()
+  const [localSearch, setLocalSearch] = useState("")
   const { toast } = useToast()
   const [users, setUsers] = useState<User[]>(initialUsers)
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
@@ -215,9 +214,9 @@ export default function UsersPage() {
   const [statusFilter, setStatusFilter] = useState("all")
 
   const filteredUsers = users.filter(user => {
-    const matchesSearch = user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         user.facilityName.toLowerCase().includes(searchQuery.toLowerCase())
+    const matchesSearch = user.name.toLowerCase().includes(localSearch.toLowerCase()) ||
+                         user.email.toLowerCase().includes(localSearch.toLowerCase()) ||
+                         user.facilityName.toLowerCase().includes(localSearch.toLowerCase())
     const matchesRole = roleFilter === "all" || user.role === roleFilter
     const matchesVerification = verificationFilter === "all" || user.verificationStatus === verificationFilter
     const matchesStatus = statusFilter === "all" || user.accountStatus === statusFilter
@@ -332,6 +331,8 @@ export default function UsersPage() {
             title="Users Management"
             subtitle="Medical Authority can manage system users (hospital staff, pharmacists, medical authorities)"
             searchPlaceholder="Search users..."
+            searchValue={localSearch}
+            onSearchChange={setLocalSearch}
           />
           <main className="flex-1 overflow-y-auto p-6">
             <div className="space-y-6">

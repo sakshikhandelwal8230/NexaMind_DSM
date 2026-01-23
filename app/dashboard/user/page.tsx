@@ -33,7 +33,6 @@ import {
 
 import type { InventoryItem, Transfer, Alert, ReorderItem, StockStatus } from "@/lib/types"
 import { addTransferRequest, emitTransferUpdated, type TransferRequest, type TransferRequestItem } from "@/lib/dms-storage"
-import { useSearch } from "@/app/providers/search-context"
 
 // -------------------- Mocked data (frontend-only) --------------------
 const mockInventory: InventoryItem[] = [
@@ -116,7 +115,7 @@ function trendBadge(delta: number) {
 
 // -------------------- Page --------------------
 export default function UserDashboardPage() {
-  const { searchQuery, setSearchQuery } = useSearch()
+  const [localSearch, setLocalSearch] = useState("")
   const [inventory, setInventory] = useState<InventoryItem[]>(mockInventory)
   const [transfers, setTransfers] = useState<Transfer[]>(mockTransfers)
   const [alerts, setAlerts] = useState<Alert[]>(mockAlerts)
@@ -163,7 +162,7 @@ export default function UserDashboardPage() {
   }, [inventory, transfers, reorderQueue, expiringCount])
 
   const filteredInventory = useMemo(() => {
-    const term = searchQuery.trim().toLowerCase()
+    const term = localSearch.trim().toLowerCase()
 
     let list = inventory.filter((item) => {
       const matchesSearch =
@@ -208,7 +207,7 @@ export default function UserDashboardPage() {
     })
 
     return list
-  }, [inventory, searchQuery, statusFilter, categoryFilter, expiryFilter, sortBy, sortOrder, kpiFilter])
+  }, [inventory, localSearch, statusFilter, categoryFilter, expiryFilter, sortBy, sortOrder, kpiFilter])
 
   const health = useMemo(() => {
     const available = inventory.filter((i) => i.status === "available").length
@@ -495,8 +494,8 @@ export default function UserDashboardPage() {
                       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                         <Input
                           placeholder="Search medicines..."
-                          value={searchQuery}
-                          onChange={(e) => setSearchQuery(e.target.value)}
+                          value={localSearch}
+                          onChange={(e) => setLocalSearch(e.target.value)}
                           className="sm:w-[280px]"
                         />
 

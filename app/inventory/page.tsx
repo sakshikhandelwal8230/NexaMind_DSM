@@ -22,7 +22,6 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Plus, Pencil, Trash2, Package, AlertTriangle, CheckCircle, Search, Bot } from "lucide-react"
-import { useSearch } from "@/app/providers/search-context"
 import { InventoryAIAssistant } from "@/components/dashboard/inventory-ai-assistant"
 
 interface Medicine {
@@ -175,7 +174,7 @@ function InventoryContent() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [editingMedicine, setEditingMedicine] = useState<Medicine | null>(null)
   const [filterCategory, setFilterCategory] = useState<string>("all")
-  const { searchQuery } = useSearch()
+  const [localSearch, setLocalSearch] = useState("")
   const [filterStatus, setFilterStatus] = useState<string>("all")
   const [isAiDialogOpen, setIsAiDialogOpen] = useState(false)
   const [highlightedMedicines, setHighlightedMedicines] = useState<Medicine[]>([])
@@ -267,7 +266,7 @@ function InventoryContent() {
 
   const filteredMedicines = medicines.filter((med) => {
     const matchesCategory = filterCategory === "all" || med.category === filterCategory
-    const matchesSearch = med.name.toLowerCase().includes(searchQuery.toLowerCase())
+    const matchesSearch = med.name.toLowerCase().includes(localSearch.toLowerCase())
     const status = getStockStatus(med.currentStock, med.minThreshold)
     const matchesStatus = filterStatus === "all" || status === filterStatus
     return matchesCategory && matchesSearch && matchesStatus
@@ -284,7 +283,7 @@ function InventoryContent() {
     <div className="flex h-screen overflow-hidden bg-background">
       <DashboardSidebar />
       <div className="flex flex-1 flex-col overflow-hidden">
-        <DashboardHeader title="My Inventory" subtitle="Manage and view your medicine stock" />
+        <DashboardHeader title="My Inventory" subtitle="Manage and view your medicine stock" searchPlaceholder="Search medicines..." searchValue={localSearch} onSearchChange={setLocalSearch} />
         <main className="flex-1 overflow-y-auto p-6">
           {/* Summary Cards */}
           <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

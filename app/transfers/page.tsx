@@ -14,7 +14,6 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Truck, Plus, CheckCircle, XCircle, AlertTriangle, MapPin, Package, Eye, Inbox } from "lucide-react"
-import { useSearch } from "@/app/providers/search-context"
 import { getTransferRequests, updateTransferRequestStatus, subscribeTransferRequests, emitTransferUpdated, type TransferRequest, type TransferStatus } from "@/lib/dms-storage"
 
 // Display format for the table
@@ -125,7 +124,7 @@ const priorityColors = {
 }
 
 export default function TransfersPage() {
-  const { searchQuery } = useSearch()
+  const [localSearch, setLocalSearch] = useState("")
   const [isAdmin] = useState(true)
   const [transfers, setTransfers] = useState<DisplayTransfer[]>([])
   const [mockTransfersData] = useState(mockTransfers) // Keep for fallback
@@ -182,10 +181,10 @@ export default function TransfersPage() {
 
   const filteredTransfers = transfers.filter(t => {
     const matchesSearch =
-      t.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      t.medicine.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      t.fromFacility.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      t.toFacility.toLowerCase().includes(searchQuery.toLowerCase())
+      t.id.toLowerCase().includes(localSearch.toLowerCase()) ||
+      t.medicine.toLowerCase().includes(localSearch.toLowerCase()) ||
+      t.fromFacility.toLowerCase().includes(localSearch.toLowerCase()) ||
+      t.toFacility.toLowerCase().includes(localSearch.toLowerCase())
     if (!matchesSearch) return false
     if (zoneFilter !== "all" && t.zone !== zoneFilter) return false
     if (statusFilter !== "all" && t.status !== statusFilter) return false
@@ -241,7 +240,7 @@ export default function TransfersPage() {
         <DashboardSidebar isAdmin={isAdmin} />
 
         <div className="flex flex-1 flex-col overflow-hidden">
-          <DashboardHeader title="Inter-Facility Transfers" searchPlaceholder="Search transfers..." />
+          <DashboardHeader title="Inter-Facility Transfers" searchPlaceholder="Search transfers..." searchValue={localSearch} onSearchChange={setLocalSearch} />
 
           <main className="flex-1 overflow-y-auto p-6 space-y-6">
             {/* KPI CARDS */}

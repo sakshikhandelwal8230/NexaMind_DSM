@@ -11,7 +11,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Bell, AlertTriangle, AlertOctagon, Zap, Building2, Store, Clock } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { useSearch } from "@/app/providers/search-context"
 
 interface Alert {
   id: string
@@ -117,7 +116,7 @@ const mockAlerts: Alert[] = [
 ]
 
 export default function AlertsPage() {
-  const { searchQuery } = useSearch()
+  const [localSearch, setLocalSearch] = useState("")
   const [filter, setFilter] = useState<string>("all")
   const [emergencyMode, setEmergencyMode] = useState(false)
 
@@ -128,7 +127,7 @@ export default function AlertsPage() {
   }
 
   const filteredAlerts = mockAlerts.filter((alert) => {
-    const matchesSearch = alert.medicineName.toLowerCase().includes(searchQuery.toLowerCase())
+    const matchesSearch = alert.medicineName.toLowerCase().includes(localSearch.toLowerCase())
     if (!matchesSearch) return false
     if (emergencyMode && alert.alertType !== "Critical") return false
     if (filter === "all") return true
@@ -163,7 +162,7 @@ export default function AlertsPage() {
     <div className="flex h-screen overflow-hidden bg-background">
       <DashboardSidebar />
       <div className="flex flex-1 flex-col overflow-hidden">
-        <DashboardHeader title="Alerts & Notifications" subtitle="Monitor real-time medicine shortage alerts" />
+        <DashboardHeader title="Alerts & Notifications" subtitle="Monitor real-time medicine shortage alerts" searchPlaceholder="Search alerts..." searchValue={localSearch} onSearchChange={setLocalSearch} />
         <main className="flex-1 overflow-y-auto p-6">
           {emergencyMode && (
             <div className="mb-6 flex items-center gap-4 rounded-lg border-2 border-red-500 bg-red-500/10 p-4 shadow-lg shadow-red-500/20">
