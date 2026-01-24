@@ -132,9 +132,11 @@ export function DashboardHeader({ title, subtitle, searchValue, onSearchChange, 
                   const Icon =
                     alert.type === "critical" ? AlertOctagon : alert.type === "warning" ? AlertTriangle : Clock
                   return (
-                    <div
+                    <Link
                       key={alert.id}
-                      className="flex items-start gap-3 border-b p-4 last:border-b-0 hover:bg-muted/50"
+                      href="/inventory"
+                      onClick={() => setAlertsOpen(false)}
+                      className="flex items-start gap-3 border-b p-4 last:border-b-0 hover:bg-muted/50 cursor-pointer transition-colors"
                     >
                       <div
                         className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
@@ -151,7 +153,7 @@ export function DashboardHeader({ title, subtitle, searchValue, onSearchChange, 
                         <p className="text-sm font-medium">{alert.medicine}</p>
                         <p className="text-sm text-muted-foreground">{alert.message}</p>
                       </div>
-                    </div>
+                    </Link>
                   )
                 })
               )}

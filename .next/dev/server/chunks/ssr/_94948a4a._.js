@@ -1235,8 +1235,10 @@ function DashboardHeader({ title, subtitle, searchValue, onSearchChange, hideSea
                                             columnNumber: 17
                                         }, this) : alerts.map((alert)=>{
                                             const Icon = alert.type === "critical" ? __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$octagon$2d$alert$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__AlertOctagon$3e$__["AlertOctagon"] : alert.type === "warning" ? __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$triangle$2d$alert$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__AlertTriangle$3e$__["AlertTriangle"] : __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$clock$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Clock$3e$__["Clock"];
-                                            return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                                className: "flex items-start gap-3 border-b p-4 last:border-b-0 hover:bg-muted/50",
+                                            return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$client$2f$app$2d$dir$2f$link$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["default"], {
+                                                href: "/inventory",
+                                                onClick: ()=>setAlertsOpen(false),
+                                                className: "flex items-start gap-3 border-b p-4 last:border-b-0 hover:bg-muted/50 cursor-pointer transition-colors",
                                                 children: [
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                                         className: `flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${alert.type === "critical" ? "bg-destructive/20 text-destructive" : alert.type === "warning" ? "bg-yellow-100 text-yellow-600" : "bg-blue-100 text-blue-600"}`,
@@ -1244,12 +1246,12 @@ function DashboardHeader({ title, subtitle, searchValue, onSearchChange, hideSea
                                                             className: "h-4 w-4"
                                                         }, void 0, false, {
                                                             fileName: "[project]/components/dashboard/dashboard-header.tsx",
-                                                            lineNumber: 148,
+                                                            lineNumber: 150,
                                                             columnNumber: 25
                                                         }, this)
                                                     }, void 0, false, {
                                                         fileName: "[project]/components/dashboard/dashboard-header.tsx",
-                                                        lineNumber: 139,
+                                                        lineNumber: 141,
                                                         columnNumber: 23
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1260,7 +1262,7 @@ function DashboardHeader({ title, subtitle, searchValue, onSearchChange, hideSea
                                                                 children: alert.medicine
                                                             }, void 0, false, {
                                                                 fileName: "[project]/components/dashboard/dashboard-header.tsx",
-                                                                lineNumber: 151,
+                                                                lineNumber: 153,
                                                                 columnNumber: 25
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -1268,13 +1270,13 @@ function DashboardHeader({ title, subtitle, searchValue, onSearchChange, hideSea
                                                                 children: alert.message
                                                             }, void 0, false, {
                                                                 fileName: "[project]/components/dashboard/dashboard-header.tsx",
-                                                                lineNumber: 152,
+                                                                lineNumber: 154,
                                                                 columnNumber: 25
                                                             }, this)
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/components/dashboard/dashboard-header.tsx",
-                                                        lineNumber: 150,
+                                                        lineNumber: 152,
                                                         columnNumber: 23
                                                     }, this)
                                                 ]
@@ -1300,17 +1302,17 @@ function DashboardHeader({ title, subtitle, searchValue, onSearchChange, hideSea
                                                 children: "View All Alerts"
                                             }, void 0, false, {
                                                 fileName: "[project]/components/dashboard/dashboard-header.tsx",
-                                                lineNumber: 163,
+                                                lineNumber: 165,
                                                 columnNumber: 19
                                             }, this)
                                         }, void 0, false, {
                                             fileName: "[project]/components/dashboard/dashboard-header.tsx",
-                                            lineNumber: 162,
+                                            lineNumber: 164,
                                             columnNumber: 17
                                         }, this)
                                     }, void 0, false, {
                                         fileName: "[project]/components/dashboard/dashboard-header.tsx",
-                                        lineNumber: 161,
+                                        lineNumber: 163,
                                         columnNumber: 15
                                     }, this)
                                 ]
@@ -1327,7 +1329,7 @@ function DashboardHeader({ title, subtitle, searchValue, onSearchChange, hideSea
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$dashboard$2f$profile$2d$menu$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["ProfileMenu"], {}, void 0, false, {
                         fileName: "[project]/components/dashboard/dashboard-header.tsx",
-                        lineNumber: 170,
+                        lineNumber: 172,
                         columnNumber: 9
                     }, this)
                 ]
