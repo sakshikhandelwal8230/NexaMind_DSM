@@ -3,3 +3,12 @@
 [00:00:11.419] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
 [00:00:18.940] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
 [00:04:24.627] Server  LOG      ✓ Compiled in 196ms
+[00:04:50.438] Browser ERROR   uncaughtError: ReferenceError: searchQuery is not defined
+[00:04:59.776] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:07:03.167] Server  LOG      ✓ Compiled in 212ms
+[00:08:15.662] Server  LOG      ✓ Compiled in 184ms
+[00:09:44.083] Server  LOG      ✓ Compiled in 198ms
+[00:09:54.673] Server  LOG      ✓ Compiled in 257ms
+[00:10:10.126] Server  LOG      ✓ Compiled in 158ms
+[00:10:23.954] Server  LOG      ✓ Compiled in 282ms
+[00:10:28.812] Server  LOG      ✓ Compiled in 252ms

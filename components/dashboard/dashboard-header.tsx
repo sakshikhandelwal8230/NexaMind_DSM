@@ -10,6 +10,7 @@ import Link from "next/link"
 import { DashboardThemeToggle } from "@/components/dashboard-theme-toggle"
 import { ProfileMenu } from "@/components/dashboard/profile-menu"
 import { useSearch } from "@/app/providers/search-context"
+import { sharedAlerts } from "@/lib/alerts-data"
 
 interface DashboardHeaderProps {
   title: string
@@ -22,8 +23,8 @@ interface DashboardHeaderProps {
 }
 
 interface Alert {
-  id: number
-  type: "critical" | "warning" | "expiry"
+  id: string
+  type: "critical" | "warning"
   medicine: string
   message: string
 }
@@ -39,46 +40,16 @@ export function DashboardHeader({ title, subtitle, searchValue, onSearchChange, 
     else setSearchQuery(value)
   }
 
-  // Mock alerts data
-  const mockMedicines = [
-    { id: 1, name: "Paracetamol 500mg", stock: 0, threshold: 50, expiryDays: 45 },
-    { id: 2, name: "Amoxicillin 250mg", stock: 15, threshold: 100, expiryDays: 25 },
-    { id: 3, name: "Metformin 500mg", stock: 120, threshold: 150, expiryDays: 60 },
-    { id: 4, name: "Insulin Glargine", stock: 200, threshold: 100, expiryDays: 7 },
-    { id: 5, name: "Atorvastatin 10mg", stock: 85, threshold: 100, expiryDays: 90 },
-  ]
+  // Use shared alerts data - convert to display format
+  const alerts: Alert[] = sharedAlerts.map((alert) => ({
+    id: alert.id,
+    type: alert.alertType === "Critical" ? "critical" : "warning",
+    medicine: alert.medicineName,
+    message: alert.quantityLeft === 0 
+      ? "Stock depleted - 0 units remaining" 
+      : `${alert.alertType} stock - ${alert.quantityLeft} units remaining`,
+  }))
 
-  const generateAlerts = (): Alert[] => {
-    const alerts: Alert[] = []
-    mockMedicines.forEach((medicine) => {
-      if (medicine.stock === 0) {
-        alerts.push({
-          id: medicine.id,
-          type: "critical",
-          medicine: medicine.name,
-          message: "Stock depleted - 0 units remaining",
-        })
-      } else if (medicine.stock < medicine.threshold) {
-        alerts.push({
-          id: medicine.id,
-          type: "warning",
-          medicine: medicine.name,
-          message: `Low stock - ${medicine.stock} units remaining`,
-        })
-      }
-      if (medicine.expiryDays < 30) {
-        alerts.push({
-          id: medicine.id + 100,
-          type: "expiry",
-          medicine: medicine.name,
-          message: `Batch expires in ${medicine.expiryDays} days`,
-        })
-      }
-    })
-    return alerts
-  }
-
-  const alerts = generateAlerts()
   const criticalCount = alerts.filter((a) => a.type === "critical").length
 
   return (
@@ -129,12 +100,11 @@ export function DashboardHeader({ title, subtitle, searchValue, onSearchChange, 
                 <div className="p-4 text-center text-muted-foreground">No alerts at this time</div>
               ) : (
                 alerts.map((alert) => {
-                  const Icon =
-                    alert.type === "critical" ? AlertOctagon : alert.type === "warning" ? AlertTriangle : Clock
+                  const Icon = alert.type === "critical" ? AlertOctagon : AlertTriangle
                   return (
                     <Link
                       key={alert.id}
-                      href="/inventory"
+                      href="/alerts"
                       onClick={() => setAlertsOpen(false)}
                       className="flex items-start gap-3 border-b p-4 last:border-b-0 hover:bg-muted/50 cursor-pointer transition-colors"
                     >
@@ -142,9 +112,7 @@ export function DashboardHeader({ title, subtitle, searchValue, onSearchChange, 
                         className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
                           alert.type === "critical"
                             ? "bg-destructive/20 text-destructive"
-                            : alert.type === "warning"
-                              ? "bg-yellow-100 text-yellow-600"
-                              : "bg-blue-100 text-blue-600"
+                            : "bg-yellow-100 text-yellow-600"
                         }`}
                       >
                         <Icon className="h-4 w-4" />
@@ -161,9 +129,9 @@ export function DashboardHeader({ title, subtitle, searchValue, onSearchChange, 
 
             {alerts.length > 0 && (
               <div className="border-t p-4">
-                <Button variant="outline" className="w-full" asChild>
-                  <Link href="/alerts">View All Alerts</Link>
-                </Button>
+                <Link href="/alerts" onClick={() => setAlertsOpen(false)}>
+                  <Button variant="outline" className="w-full">View All Alerts</Button>
+                </Link>
               </div>
             )}
           </PopoverContent>
