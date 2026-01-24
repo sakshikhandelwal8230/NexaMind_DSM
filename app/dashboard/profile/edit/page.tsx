@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { DashboardSidebar } from "@/components/dashboard/sidebar"
 import { DashboardHeader } from "@/components/dashboard/dashboard-header"
@@ -11,9 +11,10 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Camera, Save, X } from "lucide-react"
+import { toast } from "sonner"
 
-// Dummy user data
-const initialUserData = {
+// Default user data
+const defaultUserData = {
   fullName: "John Doe",
   email: "john.doe@example.com",
   facility: "Central Hospital",
@@ -25,10 +26,26 @@ export default function EditProfilePage() {
   const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const [userData, setUserData] = useState(initialUserData)
+  const [userData, setUserData] = useState(defaultUserData)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
-  const [previewUrl, setPreviewUrl] = useState<string>(initialUserData.avatarUrl)
+  const [previewUrl, setPreviewUrl] = useState<string>("")
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
+  const [isLoaded, setIsLoaded] = useState(false)
+
+  // Load saved profile data from localStorage on mount
+  useEffect(() => {
+    const savedProfile = localStorage.getItem("userProfile")
+    if (savedProfile) {
+      try {
+        const parsed = JSON.parse(savedProfile)
+        setUserData(parsed)
+        setPreviewUrl(parsed.avatarUrl || "")
+      } catch (e) {
+        console.error("Failed to parse saved profile:", e)
+      }
+    }
+    setIsLoaded(true)
+  }, [])
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -72,14 +89,17 @@ export default function EditProfilePage() {
 
   const handleSave = () => {
     if (validateForm()) {
-      // Log updated data to console
-      console.log('Updated profile data:', {
+      // Save to localStorage
+      const profileToSave = {
         ...userData,
-        avatarFile: selectedFile,
-      })
+        avatarUrl: previewUrl,
+      }
+      localStorage.setItem("userProfile", JSON.stringify(profileToSave))
 
-      // In a real app, this would save to backend
-      alert('Profile updated successfully! (Check console for logged data)')
+      // Show success toast
+      toast.success("Profile updated successfully!", {
+        description: "Your changes have been saved.",
+      })
 
       // Navigate back to profile
       router.push('/dashboard/profile')

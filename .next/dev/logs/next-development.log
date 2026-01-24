@@ -1,14 +1,19 @@
-[00:00:02.267] Server  LOG      ✓ Ready in 1563ms
-[00:00:09.999] Server  LOG      ○ Compiling /dashboard/admin/users ...
-[00:00:11.419] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:00:18.940] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:04:24.627] Server  LOG      ✓ Compiled in 196ms
-[00:04:50.438] Browser ERROR   uncaughtError: ReferenceError: searchQuery is not defined
-[00:04:59.776] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:07:03.167] Server  LOG      ✓ Compiled in 212ms
-[00:08:15.662] Server  LOG      ✓ Compiled in 184ms
-[00:09:44.083] Server  LOG      ✓ Compiled in 198ms
-[00:09:54.673] Server  LOG      ✓ Compiled in 257ms
-[00:10:10.126] Server  LOG      ✓ Compiled in 158ms
-[00:10:23.954] Server  LOG      ✓ Compiled in 282ms
-[00:10:28.812] Server  LOG      ✓ Compiled in 252ms
+[00:00:02.045] Server  LOG      ✓ Ready in 1338ms
+[00:00:07.773] Server  LOG      ○ Compiling / ...
+[00:00:09.352] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:00:50.442] Browser LOG     Updated profile data: {"avatarFile":null,"avatarUrl":"","email":"john.doe@example.com","facility":"Central Hospital","fullName":"John Do","role":"User"}
+[00:01:06.265] Browser LOG     Updated profile data: {"avatarFile":null,"avatarUrl":"","email":"john.doe@example.com","facility":"Central Hospital","fullName":"John ","role":"User"}
+[01:00:31.584] Server  LOG      ✓ Compiled in 337ms
+[01:01:28.227] Server  LOG      ✓ Compiled in 176ms
+[01:01:36.164] Server  LOG      ✓ Compiled in 229ms
+[01:03:52.013] Server  LOG      ✓ Compiled in 281ms
+[01:05:42.077] Server  LOG      ✓ Compiled in 322ms
+[01:06:39.573] Server  LOG      ✓ Compiled in 217ms
+[01:08:15.087] Server  LOG      ✓ Compiled in 193ms
+[01:10:13.564] Server  LOG      ✓ Compiled in 125ms
+[01:10:31.595] Server  LOG      ✓ Compiled in 172ms
+[01:11:41.778] Server  LOG      ✓ Compiled in 84ms
+[01:12:47.405] Server  LOG      ✓ Compiled in 99ms
+[01:13:34.872] Server  LOG      ✓ Compiled in 94ms
+[01:14:45.226] Server  LOG      ✓ Compiled in 99ms
+[01:16:05.454] Server  LOG      ✓ Compiled in 98ms

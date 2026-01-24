@@ -18,6 +18,16 @@ export default function LoginPage() {
             <p className="mt-2 text-muted-foreground">Sign in to access your dashboard</p>
           </div>
 
+          <div className="mb-4 text-center">
+            <span className="text-xs text-muted-foreground">
+              Demo Email:{" "}
+              <span className="font-semibold">demo@nexaamind.com</span>
+              <br />
+              Demo Password:{" "}
+              <span className="font-semibold">demo1234</span>
+            </span>
+          </div>
+
           <LoginForm />
 
           <p className="mt-6 text-center text-sm text-muted-foreground">

@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { DashboardSidebar } from "@/components/dashboard/sidebar"
@@ -11,18 +12,37 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Separator } from "@/components/ui/separator"
 import { User, Mail, Shield, Building2, CheckCircle, Edit, Settings } from "lucide-react"
 
-// Dummy user data
-const userData = {
+// Default user data
+const defaultUserData = {
   fullName: "John Doe",
   email: "john.doe@example.com",
   role: "User",
   facility: "Central Hospital",
   accountStatus: "Active",
-  avatarUrl: "", // Empty for fallback
+  avatarUrl: "",
 }
 
 export default function ProfilePage() {
   const router = useRouter()
+  const [userData, setUserData] = useState(defaultUserData)
+  const [isLoaded, setIsLoaded] = useState(false)
+
+  // Load saved profile data from localStorage on mount
+  useEffect(() => {
+    const savedProfile = localStorage.getItem("userProfile")
+    if (savedProfile) {
+      try {
+        const parsed = JSON.parse(savedProfile)
+        setUserData({
+          ...defaultUserData,
+          ...parsed,
+        })
+      } catch (e) {
+        console.error("Failed to parse saved profile:", e)
+      }
+    }
+    setIsLoaded(true)
+  }, [])
 
   const handleGoToSettings = () => {
     router.push("/dashboard/settings")

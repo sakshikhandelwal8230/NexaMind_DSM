@@ -15,6 +15,7 @@ import {
   ChevronRight,
   Users,
   Truck,
+  CreditCard,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useState } from "react"
@@ -41,6 +42,7 @@ export function DashboardSidebar({ isAdmin = false }: SidebarProps) {
     { href: "/dashboard/admin/facilities", label: "Facilities", icon: Building2, isChild: true, parent: "/transfers" },
     { href: "/dashboard/admin/users", label: "Users", icon: Users, isChild: true, parent: "/transfers" },
     { href: "/security", label: "Security", icon: Shield },
+    { href: "/subscription", label: "Subscription", icon: CreditCard },
     { href: "/dashboard/settings", label: "Settings", icon: Settings },
   ]
 
@@ -50,6 +52,7 @@ export function DashboardSidebar({ isAdmin = false }: SidebarProps) {
     { href: "/alerts", label: "Alerts", icon: AlertTriangle },
     { href: "/transfers", label: "Transfers", icon: Truck },
     { href: "/security", label: "Security", icon: Shield },
+    { href: "/subscription", label: "Subscription", icon: CreditCard },
     { href: "/dashboard/settings", label: "Settings", icon: Settings },
   ]
 
