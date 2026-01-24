@@ -1,8 +1,8 @@
 "use client"
 
-import type React from "react"
-
-import { useState } from "react"
+import { useEffect, useState } from "react"
+import { collection, addDoc, deleteDoc, doc, updateDoc, onSnapshot } from "firebase/firestore"
+import { db } from "@/lib/firebase"
 import { DashboardSidebar } from "@/components/dashboard/sidebar"
 import { DashboardHeader } from "@/components/dashboard/dashboard-header"
 import { Button } from "@/components/ui/button"
@@ -19,47 +19,399 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Plus, Pencil, Trash2, Package, AlertTriangle, CheckCircle, Search, Bot } from "lucide-react"
-import { InventoryAIAssistant } from "@/components/dashboard/inventory-ai-assistant"
+import { Plus, Pencil, Trash2, Package, AlertTriangle, Save, X } from "lucide-react"
 
 interface Medicine {
   id: string
   name: string
-  category: "OTC" | "Prescription"
+  category: string
   currentStock: number
   minThreshold: number
   expiryDate: string
   batchNumber: string
+  manufacturer?: string
 }
 
-interface FormFieldProps {
-  id: string
-  label: string
-  type?: string
-  value: string
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void
-  placeholder?: string
-  error?: string
-}
+export default function InventoryPage() {
+  const [medicines, setMedicines] = useState<Medicine[]>([])
+  const [loading, setLoading] = useState(true)
+  const [open, setOpen] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [formData, setFormData] = useState({
+    name: "",
+    category: "OTC" as "OTC" | "Prescription",
+    currentStock: "",
+    minThreshold: "",
+    expiryDate: "",
+    batchNumber: "",
+    manufacturer: ""
+  })
 
-// Move FormField outside component to prevent remounting on each parent render
-const FormField = (props: FormFieldProps) => (
-  <div className="grid gap-2">
-    <Label htmlFor={props.id}>{props.label}</Label>
-    <Input
-      id={props.id}
-      type={props.type || "text"}
-      value={props.value}
-      onChange={props.onChange}
-      placeholder={props.placeholder}
-      className={props.error ? "border-destructive" : ""}
-      min={props.type === "number" ? 0 : undefined}
-    />
-    {props.error && <p className="text-xs text-destructive">{props.error}</p>}
-  </div>
-)
+  // ✨ REAL-TIME SYNC: Listen for changes in Firebase
+  // When Firebase data changes, this component updates automatically
+  useEffect(() => {
+    setLoading(true)
+    const medicinesRef = collection(db, "medicines")
+    
+    // onSnapshot: Creates a real-time listener for the medicines collection
+    // It triggers whenever data is added, updated, or deleted in Firebase
+    const unsubscribe = onSnapshot(
+      medicinesRef,
+      (snapshot) => {
+        const data = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as Medicine[]
+        
+        setMedicines(data)
+        console.log("🔄 Real-time update from Firebase:", data)
+        setLoading(false)
+      },
+      (error) => {
+        console.error("❌ Error setting up real-time listener:", error)
+        setLoading(false)
+      }
+    )
+
+    // Cleanup listener when component unmounts
+    return () => unsubscribe()
+  }, [])
+
+  // Handle Add/Update of medicines
+  const handleAddMedicine = async () => {
+    if (!formData.name || !formData.currentStock || !formData.minThreshold || !formData.expiryDate || !formData.batchNumber) {
+      alert("Please fill in all required fields")
+      return
+    }
+
+    try {
+      if (editingId) {
+        // UPDATE: Changes appear instantly in Firebase AND on this page
+        await updateDoc(doc(db, "medicines", editingId), {
+          name: formData.name,
+          category: formData.category,
+          currentStock: parseInt(formData.currentStock),
+          minThreshold: parseInt(formData.minThreshold),
+          expiryDate: formData.expiryDate,
+          batchNumber: formData.batchNumber,
+          manufacturer: formData.manufacturer,
+          updatedAt: new Date()
+        })
+        console.log("✏️ Medicine UPDATED in Firebase - Page updates automatically!")
+        setEditingId(null)
+      } else {
+        // ADD: New medicine saved to Firebase and appears here automatically
+        await addDoc(collection(db, "medicines"), {
+          name: formData.name,
+          category: formData.category,
+          currentStock: parseInt(formData.currentStock),
+          minThreshold: parseInt(formData.minThreshold),
+          expiryDate: formData.expiryDate,
+          batchNumber: formData.batchNumber,
+          manufacturer: formData.manufacturer,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        })
+        console.log("✅ Medicine ADDED to Firebase - Page updates automatically!")
+      }
+      
+      setFormData({ name: "", category: "OTC", currentStock: "", minThreshold: "", expiryDate: "", batchNumber: "", manufacturer: "" })
+      setOpen(false)
+    } catch (error) {
+      console.error("❌ Error saving medicine:", error)
+      alert("Error saving medicine. Please try again.")
+    }
+  }
+
+  // Edit an existing medicine
+  const handleEditMedicine = (medicine: Medicine) => {
+    setEditingId(medicine.id)
+    setFormData({
+      name: medicine.name || "",
+      category: (medicine.category as "OTC" | "Prescription") || "OTC",
+      currentStock: (medicine.currentStock || 0).toString(),
+      minThreshold: (medicine.minThreshold || 0).toString(),
+      expiryDate: medicine.expiryDate || "",
+      batchNumber: medicine.batchNumber || "",
+      manufacturer: medicine.manufacturer || ""
+    })
+    setOpen(true)
+  }
+
+  // DELETE: Remove medicine from Firebase (updates page automatically)
+  const handleDeleteMedicine = async (id: string) => {
+    if (confirm("Delete this medicine?")) {
+      try {
+        await deleteDoc(doc(db, "medicines", id))
+        console.log("🗑️ Medicine DELETED from Firebase - Page updates automatically!")
+      } catch (error) {
+        console.error("❌ Error deleting medicine:", error)
+        alert("Error deleting medicine. Please try again.")
+      }
+    }
+  }
+
+  const handleCloseDialog = () => {
+    setOpen(false)
+    setEditingId(null)
+    setFormData({ name: "", category: "OTC", currentStock: "", minThreshold: "", expiryDate: "", batchNumber: "", manufacturer: "" })
+  }
+
+  return (
+    <div className="flex h-screen bg-background">
+      <DashboardSidebar />
+      <main className="flex-1 flex flex-col overflow-hidden">
+        <DashboardHeader />
+        <div className="flex-1 overflow-auto">
+          <div className="p-8">
+            <div className="mb-8">
+              <h1 className="text-4xl font-bold text-foreground mb-2">Inventory Management</h1>
+              <p className="text-muted-foreground text-lg">
+                ✨ <span className="font-semibold">Real-time Sync:</span> Add/edit/delete medicines here and they sync to Firebase instantly. Firebase changes appear here automatically!
+              </p>
+            </div>
+
+            {/* KPI Cards - Real-time updates */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                    <Package className="w-4 h-4" />
+                    Total Medicines
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{medicines.length}</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Low Stock Items</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-orange-600">
+                    {medicines.filter(m => m.currentStock <= m.minThreshold && m.currentStock > 0).length}
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Out of Stock</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-red-600">
+                    {medicines.filter(m => m.currentStock === 0).length}
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Total Units</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">
+                    {medicines.reduce((sum, m) => sum + (m.currentStock || 0), 0) || 0}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Add/Edit Medicine Dialog */}
+            <div className="mb-6">
+              <Dialog open={open} onOpenChange={setOpen}>
+                <DialogTrigger asChild>
+                  <Button className="gap-2">
+                    <Plus className="w-4 h-4" />
+                    Add Medicine
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>{editingId ? "Edit Medicine" : "Add New Medicine"}</DialogTitle>
+                    <DialogDescription>
+                      {editingId
+                        ? "Update medicine details. Changes sync to Firebase instantly."
+                        : "Enter medicine details. It will be added to Firebase and appear here immediately."}
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div>
+                      <Label>Medicine Name *</Label>
+                      <Input
+                        value={formData.name}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        placeholder="e.g., Paracetamol 500mg"
+                      />
+                    </div>
+                    <div>
+                      <Label>Category *</Label>
+                      <select
+                        value={formData.category}
+                        onChange={(e) => setFormData({ ...formData, category: e.target.value as "OTC" | "Prescription" })}
+                        className="w-full px-3 py-2 border rounded-md"
+                      >
+                        <option value="OTC">OTC (Over The Counter)</option>
+                        <option value="Prescription">Prescription Only</option>
+                      </select>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label>Current Stock *</Label>
+                        <Input
+                          type="number"
+                          value={formData.currentStock}
+                          onChange={(e) => setFormData({ ...formData, currentStock: e.target.value })}
+                          placeholder="e.g., 100"
+                        />
+                      </div>
+                      <div>
+                        <Label>Min Threshold *</Label>
+                        <Input
+                          type="number"
+                          value={formData.minThreshold}
+                          onChange={(e) => setFormData({ ...formData, minThreshold: e.target.value })}
+                          placeholder="e.g., 20"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <Label>Expiry Date *</Label>
+                      <Input
+                        type="date"
+                        value={formData.expiryDate}
+                        onChange={(e) => setFormData({ ...formData, expiryDate: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <Label>Batch Number *</Label>
+                      <Input
+                        value={formData.batchNumber}
+                        onChange={(e) => setFormData({ ...formData, batchNumber: e.target.value })}
+                        placeholder="e.g., PCM-2024-001"
+                      />
+                    </div>
+                    <div>
+                      <Label>Manufacturer</Label>
+                      <Input
+                        value={formData.manufacturer}
+                        onChange={(e) => setFormData({ ...formData, manufacturer: e.target.value })}
+                        placeholder="e.g., Generic Pharma"
+                      />
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={handleCloseDialog}>
+                      <X className="w-4 h-4 mr-2" />
+                      Cancel
+                    </Button>
+                    <Button onClick={handleAddMedicine}>
+                      <Save className="w-4 h-4 mr-2" />
+                      {editingId ? "Update Medicine" : "Add Medicine"}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </div>
+
+            {/* Medicines Table - Updates in real-time */}
+            {loading ? (
+              <Card>
+                <CardContent className="py-8 text-center">
+                  <p className="text-muted-foreground">🔄 Loading medicines from Firebase in real-time...</p>
+                </CardContent>
+              </Card>
+            ) : medicines.length === 0 ? (
+              <Card>
+                <CardContent className="py-8 text-center">
+                  <p className="text-muted-foreground">No medicines found. Add one to get started!</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Medicines List (Real-time Sync with Firebase)</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Category</TableHead>
+                        <TableHead>Batch</TableHead>
+                        <TableHead className="text-right">Current Stock</TableHead>
+                        <TableHead className="text-right">Min Threshold</TableHead>
+                        <TableHead>Expiry Date</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {medicines.map((medicine) => {
+                        const status = medicine.currentStock === 0 ? "critical" : medicine.currentStock < medicine.minThreshold ? "low" : "available"
+                        return (
+                          <TableRow key={medicine.id}>
+                            <TableCell className="font-medium">{medicine.name}</TableCell>
+                            <TableCell>{medicine.category}</TableCell>
+                            <TableCell>{medicine.batchNumber}</TableCell>
+                            <TableCell className="text-right">{medicine.currentStock}</TableCell>
+                            <TableCell className="text-right">{medicine.minThreshold}</TableCell>
+                            <TableCell>
+                              {typeof medicine.expiryDate === 'string' 
+                                ? medicine.expiryDate 
+                                : new Date(medicine.expiryDate?.seconds * 1000 || 0).toLocaleDateString()}
+                            </TableCell>
+                            <TableCell>
+                              <Badge
+                                variant={
+                                  status === "critical"
+                                    ? "destructive"
+                                    : status === "low"
+                                      ? "secondary"
+                                      : "default"
+                                }
+                              >
+                                {status === "critical"
+                                  ? "Out of Stock"
+                                  : status === "low"
+                                    ? "Low Stock"
+                                    : "Available"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleEditMedicine(medicine)}
+                                  title="Edit and sync to Firebase"
+                                >
+                                  <Pencil className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  variant="destructive"
+                                  size="sm"
+                                  onClick={() => handleDeleteMedicine(medicine.id)}
+                                  title="Delete from Firebase"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        )
+                      })}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </div>
+      </main>
+    </div>
+  )
+}
 
 const initialMedicines: Medicine[] = [
   {
@@ -545,7 +897,7 @@ function InventoryContent() {
                   {filteredMedicines.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={8} className="text-center py-4">
-                        {searchQuery ? "No medicines found matching your search." : "No medicines found."}
+                        {localSearch ? "No medicines found matching your search." : "No medicines found."}
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -615,5 +967,3 @@ function InventoryContent() {
     </div>
   )
 }
-
-export default InventoryContent
