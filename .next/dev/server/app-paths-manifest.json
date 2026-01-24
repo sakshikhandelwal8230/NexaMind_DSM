@@ -1,10 +1,6 @@
 {
-  "/dashboard/profile/edit/page": "app/dashboard/profile/edit/page.js",
   "/dashboard/profile/page": "app/dashboard/profile/page.js",
-  "/dashboard/settings/page": "app/dashboard/settings/page.js",
   "/dashboard/user/page": "app/dashboard/user/page.js",
   "/login/page": "app/login/page.js",
-  "/page": "app/page.js",
-  "/security/page": "app/security/page.js",
-  "/subscription/page": "app/subscription/page.js"
+  "/page": "app/page.js"
 }
