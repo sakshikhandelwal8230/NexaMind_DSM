@@ -1,8 +1,238 @@
-[00:00:02.008] Server  LOG      ✓ Ready in 1338ms
-[00:00:08.888] Server  LOG      ○ Compiling / ...
-[00:00:11.834] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:00:12.081] Browser LOG     🚀 Initializing Firebase collections...
-[00:00:12.403] Browser LOG     ✅ Collections initialized successfully!
-[00:01:05.132] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:01:05.609] Browser LOG     🚀 Initializing Firebase collections...
-[00:01:06.077] Browser LOG     ✅ Collections initialized successfully!
+[00:00:01.108] Server  LOG      ✓ Ready in 729ms
+[00:00:10.901] Server  LOG      ○ Compiling / ...
+[00:00:11.032] Server  ERROR    ⨯ ./app/providers.tsx:10:1
+Module not found: Can't resolve '../components/theme-provider'
+   8 | import { EmergencyOverlay } from "../components/dashboard/emergency-overlay"
+   9 | import { SearchProvider } from "@/app/providers/search-context"
+> 10 | import { ThemeProvider } from "../components/theme-provider"
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  11 | import { Toaster } from "sonner"
+  12 | import { initializeCollections } from "@/lib/firebaseInit"
+  13 |
+
+
+
+Import trace:
+  Server Component:
+    ./app/providers.tsx
+    ./app/layout.tsx
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+[00:00:12.554] Browser ERROR   uncaughtError: Error: ./app/providers.tsx:10:1
+Module not found: Can't resolve '../components/theme-provider'
+   8 | import { EmergencyOverlay } from "../components/dashboard/emergency-overlay"
+   9 | import { SearchProvider } from "@/app/providers/search-context"
+> 10 | import { ThemeProvider } from "../components/theme-provider"
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  11 | import { Toaster } from "sonner"
+  12 | import { initializeCollections } from "@/lib/firebaseInit"
+  13 |
+
+
+
+Import trace:
+  Server Component:
+    ./app/providers.tsx
+    ./app/layout.tsx
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+[00:00:12.753] Browser ERROR   ./app/providers.tsx:10:1
+Module not found: Can't resolve '../components/theme-provider'
+   8 | import { EmergencyOverlay } from "../components/dashboard/emergency-overlay"
+   9 | import { SearchProvider } from "@/app/providers/search-context"
+> 10 | import { ThemeProvider } from "../components/theme-provider"
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  11 | import { Toaster } from "sonner"
+  12 | import { initializeCollections } from "@/lib/firebaseInit"
+  13 |
+
+Import trace:
+  Server Component:
+    ./app/providers.tsx
+    ./app/layout.tsx
+
+https://nextjs.org/docs/messages/module-not-found
+[00:00:13.067] Browser ERROR   ./app/providers.tsx:10:1
+Module not found: Can't resolve '../components/theme-provider'
+   8 | import { EmergencyOverlay } from "../components/dashboard/emergency-overlay"
+   9 | import { SearchProvider } from "@/app/providers/search-context"
+> 10 | import { ThemeProvider } from "../components/theme-provider"
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  11 | import { Toaster } from "sonner"
+  12 | import { initializeCollections } from "@/lib/firebaseInit"
+  13 |
+
+Import trace:
+  Server Component:
+    ./app/providers.tsx
+    ./app/layout.tsx
+
+https://nextjs.org/docs/messages/module-not-found
+[00:00:20.527] Server  LOG      ✓ Compiled in 120ms
+[00:00:21.527] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:00:22.722] Browser LOG     🚀 Initializing Firebase collections...
+[00:00:23.636] Browser LOG     ✅ Collections initialized successfully!
+[00:01:02.911] Server  ERROR    ⨯ ./components/dashboard/dashboard-header.tsx:10:1
+Module not found: Can't resolve '@/components/dashboard-theme-toggle'
+   8 | import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+   9 | import Link from "next/link"
+> 10 | import { DashboardThemeToggle } from "@/components/dashboard-theme-toggle"
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  11 | import { ProfileMenu } from "@/components/dashboard/profile-menu"
+  12 | import { useSearch } from "@/app/providers/search-context"
+  13 | import { sharedAlerts } from "@/lib/alerts-data"
+
+Import map: aliased to relative './components/dashboard-theme-toggle' inside of [project]/
+
+
+Import traces:
+  Client Component Browser:
+    ./components/dashboard/dashboard-header.tsx [Client Component Browser]
+    ./app/dashboard/user/page.tsx [Client Component Browser]
+    ./app/dashboard/user/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./components/dashboard/dashboard-header.tsx [Client Component SSR]
+    ./app/dashboard/user/page.tsx [Client Component SSR]
+    ./app/dashboard/user/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+[00:01:02.956] Browser ERROR   ./components/dashboard/dashboard-header.tsx:10:1
+Module not found: Can't resolve '@/components/dashboard-theme-toggle'
+   8 | import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+   9 | import Link from "next/link"
+> 10 | import { DashboardThemeToggle } from "@/components/dashboard-theme-toggle"
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  11 | import { ProfileMenu } from "@/components/dashboard/profile-menu"
+  12 | import { useSearch } from "@/app/providers/search-context"
+  13 | import { sharedAlerts } from "@/lib/alerts-data"
+
+Import map: aliased to relative './components/dashboard-theme-toggle' inside of [project]/
+
+Import traces:
+  Client Component Browser:
+    ./components/dashboard/dashboard-header.tsx [Client Component Browser]
+    ./app/dashboard/user/page.tsx [Client Component Browser]
+    ./app/dashboard/user/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./components/dashboard/dashboard-header.tsx [Client Component SSR]
+    ./app/dashboard/user/page.tsx [Client Component SSR]
+    ./app/dashboard/user/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+[00:01:02.973] Server  ERROR    ⨯ ./components/dashboard/dashboard-header.tsx:10:1
+Module not found: Can't resolve '@/components/dashboard-theme-toggle'
+   8 | import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+   9 | import Link from "next/link"
+> 10 | import { DashboardThemeToggle } from "@/components/dashboard-theme-toggle"
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  11 | import { ProfileMenu } from "@/components/dashboard/profile-menu"
+  12 | import { useSearch } from "@/app/providers/search-context"
+  13 | import { sharedAlerts } from "@/lib/alerts-data"
+
+Import map: aliased to relative './components/dashboard-theme-toggle' inside of [project]/
+
+
+Import traces:
+  Client Component Browser:
+    ./components/dashboard/dashboard-header.tsx [Client Component Browser]
+    ./app/dashboard/user/page.tsx [Client Component Browser]
+    ./app/dashboard/user/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./components/dashboard/dashboard-header.tsx [Client Component SSR]
+    ./app/dashboard/user/page.tsx [Client Component SSR]
+    ./app/dashboard/user/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+[00:01:03.148] Browser ERROR   uncaughtError: Error: ./components/dashboard/dashboard-header.tsx:10:1
+Module not found: Can't resolve '@/components/dashboard-theme-toggle'
+   8 | import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+   9 | import Link from "next/link"
+> 10 | import { DashboardThemeToggle } from "@/components/dashboard-theme-toggle"
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  11 | import { ProfileMenu } from "@/components/dashboard/profile-menu"
+  12 | import { useSearch } from "@/app/providers/search-context"
+  13 | import { sharedAlerts } from "@/lib/alerts-data"
+
+Import map: aliased to relative './components/dashboard-theme-toggle' inside of [project]/
+
+
+Import traces:
+  Client Component Browser:
+    ./components/dashboard/dashboard-header.tsx [Client Component Browser]
+    ./app/dashboard/user/page.tsx [Client Component Browser]
+    ./app/dashboard/user/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./components/dashboard/dashboard-header.tsx [Client Component SSR]
+    ./app/dashboard/user/page.tsx [Client Component SSR]
+    ./app/dashboard/user/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+[00:01:03.367] Browser ERROR   ./components/dashboard/dashboard-header.tsx:10:1
+Module not found: Can't resolve '@/components/dashboard-theme-toggle'
+   8 | import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+   9 | import Link from "next/link"
+> 10 | import { DashboardThemeToggle } from "@/components/dashboard-theme-toggle"
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  11 | import { ProfileMenu } from "@/components/dashboard/profile-menu"
+  12 | import { useSearch } from "@/app/providers/search-context"
+  13 | import { sharedAlerts } from "@/lib/alerts-data"
+
+Import map: aliased to relative './components/dashboard-theme-toggle' inside of [project]/
+
+Import traces:
+  Client Component Browser:
+    ./components/dashboard/dashboard-header.tsx [Client Component Browser]
+    ./app/dashboard/user/page.tsx [Client Component Browser]
+    ./app/dashboard/user/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./components/dashboard/dashboard-header.tsx [Client Component SSR]
+    ./app/dashboard/user/page.tsx [Client Component SSR]
+    ./app/dashboard/user/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+[00:01:03.368] Browser ERROR   ./components/dashboard/dashboard-header.tsx:10:1
+Module not found: Can't resolve '@/components/dashboard-theme-toggle'
+   8 | import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+   9 | import Link from "next/link"
+> 10 | import { DashboardThemeToggle } from "@/components/dashboard-theme-toggle"
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  11 | import { ProfileMenu } from "@/components/dashboard/profile-menu"
+  12 | import { useSearch } from "@/app/providers/search-context"
+  13 | import { sharedAlerts } from "@/lib/alerts-data"
+
+Import map: aliased to relative './components/dashboard-theme-toggle' inside of [project]/
+
+Import traces:
+  Client Component Browser:
+    ./components/dashboard/dashboard-header.tsx [Client Component Browser]
+    ./app/dashboard/user/page.tsx [Client Component Browser]
+    ./app/dashboard/user/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./components/dashboard/dashboard-header.tsx [Client Component SSR]
+    ./app/dashboard/user/page.tsx [Client Component SSR]
+    ./app/dashboard/user/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+[00:01:26.348] Server  LOG      ✓ Compiled in 138ms
+[00:01:27.031] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:01:27.712] Browser LOG     🚀 Initializing Firebase collections...
+[00:01:29.641] Browser LOG     ✅ Collections initialized successfully!
+[00:01:35.005] Browser LOG     🔄 Real-time update from Firebase: [{"batchNumber":"BATCH001","category":"Pain Relief","createdAt":{"nanoseconds":580000000,"seconds":1769231113,"type":"firestore/timestamp/1.0"},"dosage":"500mg","expiryDate":{"nanoseconds":0,"seconds":1767139200,"type":"firestore/timestamp/1.0"},"id":"E14solK8iFzC9Riduyqf","manufacturer":"Bayer","name":"Aspirin","price":5.5,"quantity":100,"updatedAt":{"nanoseconds":580000000,"seconds":1769231113,"type":"firestore/timestamp/1.0"}},{"batchNumber":"BATCH002","category":"Pain Relief","createdAt":{"nanoseconds":645000000,"seconds":1769231113,"type":"firestore/timestamp/1.0"},"dosage":"400mg","expiryDate":{"nanoseconds":0,"seconds":1764460800,"type":"firestore/timestamp/1.0"},"id":"O660DYPIDmMC2VizGTmN","manufacturer":"Pfizer","name":"Ibuprofen","price":7.5,"quantity":50,"updatedAt":{"nanoseconds":645000000,"seconds":1769231113,"type":"firestore/timestamp/1.0"}},{"batchNumber":"PCM-4545-00","category":"OTC","createdAt":{"nanoseconds":543000000,"seconds":1769233569,"type":"firestore/timestamp/1.0"},"currentStock":100,"expiryDate":"2026-11-24","id":"Ru6mN6kzF2lZe8jPAVh4","manufacturer":"dev","minThreshold":20,"name":"cheston cold","updatedAt":{"nanoseconds":543000000,"seconds":1769233569,"type":"firestore/timestamp/1.0"}},{"batchNumber":"PCM-2514-2026","category":"Prescription","createdAt":{"nanoseconds":469000000,"seconds":1769233251,"type":"firestore/timestamp/1.0"},"currentStock":150,"expiryDate":"2026-10-13","id":"ncUBc0KLfzMM4AhpBDRK","manufacturer":"VP Done","minThreshold":20,"name":"Crocin 750","updatedAt":{"nanoseconds":469000000,"seconds":1769233251,"type":"firestore/timestamp/1.0"}},{"batchNumber":"BATCH004","category":"Antibiotics","createdAt":{"nanoseconds":780000000,"seconds":1769231113,"type":"firestore/timestamp/1.0"},"dosage":"250mg","expiryDate":{"nanoseconds":0,"seconds":1773532800,"type":"firestore/timestamp/1.0"},"id":"oeX1rQd5JqMi7q0BKN7K","manufacturer":"Cipla","name":"Amoxicillin","price":12,"quantity":75,"updatedAt":{"nanoseconds":780000000,"seconds":1769231113,"type":"firestore/timestamp/1.0"}},{"batchNumber":"LMS-4512","category":"Prescription","createdAt":{"nanoseconds":710000000,"seconds":1769233793,"type":"firestore/timestamp/1.0"},"currentStock":200,"expiryDate":"2026-10-29","id":"tTRTUxl1WUGm0g5mXDRV","manufacturer":"Pharma men ","minThreshold":65,"name":"Dicold Total","updatedAt":{"nanoseconds":710000000,"seconds":1769233793,"type":"firestore/timestamp/1.0"}},{"batchNumber":"BATCH003","category":"Fever Reducer","createdAt":{"nanoseconds":725000000,"seconds":1769231113,"type":"firestore/timestamp/1.0"},"dosage":"500mg","expiryDate":{"nanoseconds":0,"seconds":1769817600,"type":"firestore/timestamp/1.0"},"id":"zNRs88cd63z35su2en9g","manufacturer":"GSK","name":"Paracetamol","price":4,"quantity":200,"updatedAt":{"nanoseconds":725000000,"seconds":1769231113,"type":"firestore/timestamp/1.0"}}]
+[00:02:07.025] Browser LOG     🔄 Real-time update from Firebase: [{"batchNumber":"BATCH001","category":"Pain Relief","createdAt":{"nanoseconds":580000000,"seconds":1769231113,"type":"firestore/timestamp/1.0"},"dosage":"500mg","expiryDate":{"nanoseconds":0,"seconds":1767139200,"type":"firestore/timestamp/1.0"},"id":"E14solK8iFzC9Riduyqf","manufacturer":"Bayer","name":"Aspirin","price":5.5,"quantity":100,"updatedAt":{"nanoseconds":580000000,"seconds":1769231113,"type":"firestore/timestamp/1.0"}},{"batchNumber":"BATCH002","category":"Pain Relief","createdAt":{"nanoseconds":645000000,"seconds":1769231113,"type":"firestore/timestamp/1.0"},"dosage":"400mg","expiryDate":{"nanoseconds":0,"seconds":1764460800,"type":"firestore/timestamp/1.0"},"id":"O660DYPIDmMC2VizGTmN","manufacturer":"Pfizer","name":"Ibuprofen","price":7.5,"quantity":50,"updatedAt":{"nanoseconds":645000000,"seconds":1769231113,"type":"firestore/timestamp/1.0"}},{"batchNumber":"PCM-4545-00","category":"OTC","createdAt":{"nanoseconds":543000000,"seconds":1769233569,"type":"firestore/timestamp/1.0"},"currentStock":100,"expiryDate":"2026-11-24","id":"Ru6mN6kzF2lZe8jPAVh4","manufacturer":"dev","minThreshold":20,"name":"cheston cold","updatedAt":{"nanoseconds":543000000,"seconds":1769233569,"type":"firestore/timestamp/1.0"}},{"batchNumber":"asdhuac","category":"Prescription","createdAt":{"nanoseconds":301000000,"seconds":1770140985,"type":"firestore/timestamp/1.0"},"currentStock":122,"expiryDate":"2026-10-29","id":"UxOdmtdrD6o4xTLtrcW4","manufacturer":"asdcgihuskm","minThreshold":36,"name":"Paracetamol","updatedAt":{"nanoseconds":301000000,"seconds":1770140985,"type":"firestore/timestamp/1.0"}},{"batchNumber":"PCM-2514-2026","category":"Prescription","createdAt":{"nanoseconds":469000000,"seconds":1769233251,"type":"firestore/timestamp/1.0"},"currentStock":150,"expiryDate":"2026-10-13","id":"ncUBc0KLfzMM4AhpBDRK","manufacturer":"VP Done","minThreshold":20,"name":"Crocin 750","updatedAt":{"nanoseconds":469000000,"seconds":1769233251,"type":"firestore/timestamp/1.0"}},{"batchNumber":"BATCH004","category":"Antibiotics","createdAt":{"nanoseconds":780000000,"seconds":1769231113,"type":"firestore/timestamp/1.0"},"dosage":"250mg","expiryDate":{"nanoseconds":0,"seconds":1773532800,"type":"firestore/timestamp/1.0"},"id":"oeX1rQd5JqMi7q0BKN7K","manufacturer":"Cipla","name":"Amoxicillin","price":12,"quantity":75,"updatedAt":{"nanoseconds":780000000,"seconds":1769231113,"type":"firestore/timestamp/1.0"}},{"batchNumber":"LMS-4512","category":"Prescription","createdAt":{"nanoseconds":710000000,"seconds":1769233793,"type":"firestore/timestamp/1.0"},"currentStock":200,"expiryDate":"2026-10-29","id":"tTRTUxl1WUGm0g5mXDRV","manufacturer":"Pharma men ","minThreshold":65,"name":"Dicold Total","updatedAt":{"nanoseconds":710000000,"seconds":1769233793,"type":"firestore/timestamp/1.0"}},{"batchNumber":"BATCH003","category":"Fever Reducer","createdAt":{"nanoseconds":725000000,"seconds":1769231113,"type":"firestore/timestamp/1.0"},"dosage":"500mg","expiryDate":{"nanoseconds":0,"seconds":1769817600,"type":"firestore/timestamp/1.0"},"id":"zNRs88cd63z35su2en9g","manufacturer":"GSK","name":"Paracetamol","price":4,"quantity":200,"updatedAt":{"nanoseconds":725000000,"seconds":1769231113,"type":"firestore/timestamp/1.0"}}]
+[00:02:07.285] Browser LOG     ✅ Medicine ADDED to Firebase - Page updates automatically!

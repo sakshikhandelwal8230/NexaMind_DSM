@@ -5,7 +5,7 @@ import { useState } from "react"
 import { usePathname } from "next/navigation"
 import { Menu, X, Pill } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { ThemeToggle } from "@/components/theme-toggle"
+import { ThemeToggle } from "@/components/providers/theme-toggle"
 import { useAuth } from "@/app/providers/auth-context"
 
 export function Navbar() {

@@ -1,6 +1,6 @@
 import Link from "next/link"
-import { Navbar } from "@/components/navbar"
-import { Footer } from "@/components/footer"
+import { Navbar } from "@/components/layout/navbar"
+import { Footer } from "@/components/layout/footer"
 import { ForgotPasswordForm } from "@/components/auth/forgot-password-form"
 import { Pill } from "lucide-react"
 
