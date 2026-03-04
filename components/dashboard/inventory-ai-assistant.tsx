@@ -14,686 +14,288 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Send, Bot, AlertTriangle, CheckCircle, Package, RefreshCw, FileText, Truck, Plus } from "lucide-react"
-import { useToast } from "@/hooks/use-toast"
-import { addTransferRequest, addToReorderList, downloadCSV, emitTransferUpdated, type TransferRequest, type TransferRequestItem, type ReorderItem } from "@/lib/dms-storage"
+import { Send, Bot, AlertTriangle, RefreshCw, Truck, Loader2 } from "lucide-react"
+import { toast } from "sonner"
+import { useSupabase } from "@/hooks/useSupabase"
+import { cn } from "@/lib/utils"
 
 interface Medicine {
   id: string
   name: string
-  category: "OTC" | "Prescription"
-  currentStock: number
-  minThreshold: number
-  expiryDate: string
-  batchNumber: string
+  category: string
+  current_stock: number
+  min_threshold: number
+  expiry_date?: string
+  batch_number?: string
 }
 
 interface InventoryAIAssistantProps {
   medicines: Medicine[]
   isOpen: boolean
   onOpenChange: (open: boolean) => void
-  onHighlightMedicines?: (medicines: Medicine[]) => void
 }
 
-function getStockStatus(current: number, threshold: number): "available" | "low" | "critical" {
-  if (current === 0) return "critical"
-  if (current < threshold) return "low"
-  return "available"
-}
-
-function getStatusBadge(status: "available" | "low" | "critical") {
-  switch (status) {
-    case "available":
-      return (
-        <Badge className="bg-emerald-500 text-white hover:bg-emerald-600">
-          <CheckCircle className="mr-1 h-3 w-3" />
-          Available
-        </Badge>
-      )
-    case "low":
-      return (
-        <Badge className="bg-amber-500 text-white hover:bg-amber-600">
-          <AlertTriangle className="mr-1 h-3 w-3" />
-          Low Stock
-        </Badge>
-      )
-    case "critical":
-      return (
-        <Badge className="bg-red-600 text-white hover:bg-red-700">
-          <AlertTriangle className="mr-1 h-3 w-3" />
-          Critical
-        </Badge>
-      )
-  }
-}
-
-function generateAIResponse(query: string, medicines: Medicine[]): string {
-  const lowerQuery = query.toLowerCase().trim()
-
-  // Critical medicines
-  if (lowerQuery.includes("critical")) {
-    const critical = medicines.filter(m => getStockStatus(m.currentStock, m.minThreshold) === "critical")
-    if (critical.length === 0) {
-      return "Great news! No medicines are currently critical. All items have some stock available."
-    }
-    return `⚠️ ${critical.length} medicine${critical.length > 1 ? 's are' : ' is'} critical:\n${critical.map(m => `• ${m.name} (${m.currentStock} units remaining)`).join('\n')}\n\nImmediate action recommended: Contact suppliers for restocking.`
-  }
-
-  // Low stock medicines
-  if (lowerQuery.includes("low stock") || lowerQuery.includes("low")) {
-    const low = medicines.filter(m => getStockStatus(m.currentStock, m.minThreshold) === "low")
-    if (low.length === 0) {
-      return "Excellent! No medicines are currently low on stock. All items are above their minimum thresholds."
-    }
-    return `🟡 ${low.length} medicine${low.length > 1 ? 's are' : ' is'} low on stock:\n${low.map(m => `• ${m.name} (${m.currentStock}/${m.minThreshold} units)`).join('\n')}\n\nConsider reordering soon to avoid shortages.`
-  }
-
-  // Expiring soon
-  if (lowerQuery.includes("expir") || lowerQuery.includes("expir")) {
-    const now = new Date()
-    const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
-    const expiringSoon = medicines.filter(m => {
-      const expiry = new Date(m.expiryDate)
-      return expiry <= thirtyDaysFromNow && expiry > now
-    })
-    if (expiringSoon.length === 0) {
-      return "Good! No medicines are expiring within the next 30 days. All expiry dates are well in the future."
-    }
-    return `⏰ ${expiringSoon.length} medicine${expiringSoon.length > 1 ? 's will' : ' will'} expire soon:\n${expiringSoon.map(m => `• ${m.name} (expires: ${new Date(m.expiryDate).toLocaleDateString()})`).join('\n')}\n\nPlan to use or redistribute these items before expiry to avoid waste.`
-  }
-
-  // Reorder suggestion for specific medicine
-  const medicineMatch = medicines.find(m => lowerQuery.includes(m.name.toLowerCase()))
-  if (medicineMatch && (lowerQuery.includes("reorder") || lowerQuery.includes("suggest"))) {
-    const suggestedQuantity = Math.max(medicineMatch.minThreshold * 2 - medicineMatch.currentStock, 0)
-    return `📦 For ${medicineMatch.name}:\n• Current stock: ${medicineMatch.currentStock} units\n• Minimum threshold: ${medicineMatch.minThreshold} units\n• Suggested reorder: ${suggestedQuantity} units\n\nThis will bring stock to ${medicineMatch.currentStock + suggestedQuantity} units (2x threshold).`
-  }
-
-  // Total stock count
-  if (lowerQuery.includes("total") && lowerQuery.includes("count")) {
-    const totalStock = medicines.reduce((sum, m) => sum + m.currentStock, 0)
-    return `📊 Total inventory count:\n• ${medicines.length} different medicines registered\n• ${totalStock} total units across all medicines\n• Average stock per medicine: ${Math.round(totalStock / medicines.length)} units`
-  }
-
-  // Available vs low-stock counts
-  if (lowerQuery.includes("available") || lowerQuery.includes("count")) {
-    const available = medicines.filter(m => getStockStatus(m.currentStock, m.minThreshold) === "available").length
-    const low = medicines.filter(m => getStockStatus(m.currentStock, m.minThreshold) === "low").length
-    const critical = medicines.filter(m => getStockStatus(m.currentStock, m.minThreshold) === "critical").length
-    return `📈 Stock status breakdown:\n• ${available} medicines available (above threshold)\n• ${low} medicines low on stock\n• ${critical} medicines critical (out of stock)\n\n${available + low + critical} total medicines monitored.`
-  }
-
-  // Default response
-  return "I'm here to help with your inventory! Try asking about:\n• Critical medicines\n• Low stock items\n• Medicines expiring soon\n• Reorder suggestions\n• Total stock counts\n• Stock status breakdown"
-}
-
-export function InventoryAIAssistant({ medicines, isOpen, onOpenChange, onHighlightMedicines }: InventoryAIAssistantProps) {
+export function InventoryAIAssistant({ medicines, isOpen, onOpenChange }: InventoryAIAssistantProps) {
   const [chatInput, setChatInput] = useState("")
-  const [chatHistory, setChatHistory] = useState<Array<{query: string, response: string, actions?: Array<{label: string, action: () => void}>}>>([])
+  const [chatHistory, setChatHistory] = useState<any[]>([])
   const [isTyping, setIsTyping] = useState(false)
   const scrollAreaRef = useRef<HTMLDivElement>(null)
 
-  // Dialog states
+  const { insert: insertTransfer } = useSupabase("transfers")
+  const { insert: insertReorder } = useSupabase("reorders")
+
+  // Dialog states for AI-triggered actions
   const [isTransferDialogOpen, setIsTransferDialogOpen] = useState(false)
   const [isReorderDialogOpen, setIsReorderDialogOpen] = useState(false)
   const [selectedMedicines, setSelectedMedicines] = useState<Medicine[]>([])
 
-  // Transfer request form
   const [transferForm, setTransferForm] = useState({
-    from: "Central Warehouse",
     to: "",
-    priority: "Critical" as 'Normal' | 'High' | 'Critical',
+    priority: "normal" as any,
     notes: "",
     quantities: {} as Record<string, number>
   })
 
-  const { toast } = useToast()
-
-  // Generate summary insights
-  const criticalMedicines = medicines.filter(m => getStockStatus(m.currentStock, m.minThreshold) === "critical")
-  const lowStockMedicines = medicines.filter(m => getStockStatus(m.currentStock, m.minThreshold) === "low")
-  const expiringSoon = medicines.filter(m => {
-    const expiry = new Date(m.expiryDate)
-    const thirtyDaysFromNow = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-    return expiry <= thirtyDaysFromNow && expiry > new Date()
-  })
-
-  // Auto-scroll to bottom when new messages are added
   useEffect(() => {
     if (scrollAreaRef.current) {
       const scrollContainer = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]')
-      if (scrollContainer) {
-        scrollContainer.scrollTop = scrollContainer.scrollHeight
-      }
+      if (scrollContainer) scrollContainer.scrollTop = scrollContainer.scrollHeight
     }
   }, [chatHistory, isTyping])
 
-  const handleSummaryClick = (type: 'critical' | 'low' | 'expiring') => {
-    let query = ""
-    let medicinesToHighlight: Medicine[] = []
-
-    switch (type) {
-      case 'critical':
-        query = "Show all critical medicines"
-        medicinesToHighlight = criticalMedicines
-        break
-      case 'low':
-        query = "Which medicines need restocking?"
-        medicinesToHighlight = lowStockMedicines
-        break
-      case 'expiring':
-        query = "What will expire in 30 days?"
-        medicinesToHighlight = expiringSoon
-        break
+  const generateResponse = (query: string) => {
+    const q = query.toLowerCase()
+    if (q.includes("critical")) {
+      const list = medicines.filter(m => m.current_stock === 0)
+      return list.length > 0
+        ? `I've found ${list.length} critical items: ${list.map(m => m.name).join(", ")}. Would you like to create a transfer request?`
+        : "No critical (zero stock) items currently detected."
     }
-
-    // Fill input field with query and send immediately
-    setChatInput(query)
-    setTimeout(() => {
-      handleSendMessage()
-    }, 100) // Small delay to show the query in input field
+    if (q.includes("low")) {
+      const list = medicines.filter(m => m.current_stock <= m.min_threshold)
+      return `${list.length} items are at or below threshold. I recommend prioritizing ${list.slice(0, 3).map(m => m.name).join(", ")} for reorder.`
+    }
+    return "I can help you analyze stock levels, find critical shortages, or draft transfer requests. Try asking: 'What items are critical?'"
   }
 
-  const handleSendMessage = () => {
+  const handleSend = () => {
     if (!chatInput.trim()) return
-
     const query = chatInput
     setChatInput("")
+    setChatHistory(prev => [...prev, { type: 'user', content: query }])
     setIsTyping(true)
 
-    // Simulate AI processing time
     setTimeout(() => {
-      const response = generateAIResponse(query, medicines)
-
-      // Extract medicines mentioned in response for highlighting
-      const mentionedMedicines: Medicine[] = []
-      if (response.includes("critical")) {
-        mentionedMedicines.push(...criticalMedicines)
-      }
-      if (response.includes("low") || response.includes("restocking")) {
-        mentionedMedicines.push(...lowStockMedicines)
-      }
-      if (response.includes("expire")) {
-        mentionedMedicines.push(...expiringSoon)
-      }
-
-      // Highlight medicines if any are mentioned
-      if (onHighlightMedicines && mentionedMedicines.length > 0) {
-        onHighlightMedicines(mentionedMedicines)
-      }
-
-      const actions = mentionedMedicines.length > 0 ? [
-        { label: "Create Transfer Request", action: handleCreateTransferRequest },
-        { label: "Mark for Reorder", action: handleMarkForReorder },
-        { label: "Export This List", action: handleExportList }
-      ] : undefined
-
-      setChatHistory(prev => [...prev, { query, response, actions }])
+      const response = generateResponse(query)
+      setChatHistory(prev => [...prev, { type: 'ai', content: response }])
       setIsTyping(false)
-    }, 1500)
+    }, 1000)
   }
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault()
-      handleSendMessage()
+  const handleAction = async (type: 'transfer' | 'reorder') => {
+    if (type === 'transfer') {
+      const meds = medicines.filter(m => m.current_stock === 0).slice(0, 5)
+      setSelectedMedicines(meds)
+      setIsTransferDialogOpen(true)
+    } else {
+      const meds = medicines.filter(m => m.current_stock <= m.min_threshold).slice(0, 5)
+      setSelectedMedicines(meds)
+      setIsReorderDialogOpen(true)
     }
   }
 
-  // Action handlers
-  const handleCreateTransferRequest = () => {
-    // Get critical medicines (quantity === 0 OR quantity < threshold * 0.25)
-    const criticalMeds = medicines.filter(med =>
-      med.currentStock === 0 || med.currentStock < med.minThreshold * 0.25
-    )
-    setSelectedMedicines(criticalMeds)
-    setTransferForm({
-      from: "Central Warehouse",
-      to: "",
-      priority: "Critical",
-      notes: "",
-      quantities: {}
-    })
-    setIsTransferDialogOpen(true)
-  }
-
-  const handleMarkForReorder = () => {
-    // Get low stock medicines (quantity < threshold)
-    const lowStockMeds = medicines.filter(med => med.currentStock < med.minThreshold)
-    setSelectedMedicines(lowStockMeds)
-    setIsReorderDialogOpen(true)
-  }
-
-  const handleExportList = () => {
-    const exportMedicines = selectedMedicines.length > 0 ? selectedMedicines : medicines
-    const csvData = exportMedicines.map(med => ({
-      "Medicine": med.name,
-      "Category": med.category,
-      "Batch No": med.batchNumber || "",
-      "Current Stock": med.currentStock,
-      "Threshold": med.minThreshold,
-      "Expiry Date": med.expiryDate || "",
-      "Status": getStockStatus(med.currentStock, med.minThreshold),
-      "Reorder Flag": "false" // Reorder flag - could be enhanced later
-    }))
-    downloadCSV(`inventory-export-${new Date().toISOString().split('T')[0]}.csv`, csvData)
-    toast({
-      title: "Export Started",
-      description: `Exported ${exportMedicines.length} medicines to CSV file.`,
-    })
-  }
-
-  // Transfer request handlers
-  const handleTransferSubmit = () => {
-    if (!transferForm.to || selectedMedicines.length === 0) return
-
-    const items: TransferRequestItem[] = selectedMedicines.map(med => ({
-      name: med.name,
-      batchNo: med.batchNumber,
-      requestedQty: transferForm.quantities[med.id] || 1,
-      currentQty: med.currentStock,
-      threshold: med.minThreshold
-    }))
-
-    const request: TransferRequest = {
-      id: crypto.randomUUID(),
-      createdAt: new Date().toISOString(),
-      from: transferForm.from,
-      to: transferForm.to,
-      priority: transferForm.priority,
-      items,
-      status: "Requested",
-      notes: transferForm.notes
-    }
-
-    addTransferRequest(request)
-    emitTransferUpdated()
-    setIsTransferDialogOpen(false)
-    toast({
-      title: "Transfer Request Created",
-      description: `Request for ${items.length} medicine${items.length > 1 ? 's' : ''} sent to ${transferForm.to}.`,
-    })
-  }
-
-  // Reorder handlers
-  const handleReorderSubmit = () => {
-    if (selectedMedicines.length === 0) return
-
-    selectedMedicines.forEach(med => {
-      const status = getStockStatus(med.currentStock, med.minThreshold)
-      let reason = "Below threshold"
-      if (status === "critical") reason = "Out of stock"
-      else if (new Date(med.expiryDate) < new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)) reason = "Expiring soon"
-
-      const reorderItem: ReorderItem = {
-        id: med.id,
-        medicine: med.name,
-        batchNo: med.batchNumber,
-        currentStock: med.currentStock,
-        threshold: med.minThreshold,
-        suggestedQty: Math.max(med.minThreshold * 2 - med.currentStock, 10),
-        reason,
-        createdAt: new Date().toISOString()
+  const submitTransfer = async () => {
+    try {
+      for (const med of selectedMedicines) {
+        await insertTransfer({
+          medicine_name: med.name,
+          quantity: transferForm.quantities[med.id] || 50,
+          to_facility: transferForm.to,
+          status: 'requested',
+          priority: transferForm.priority,
+          notes: transferForm.notes
+        })
       }
+      toast.success("Transfer requests submitted to Supabase.")
+      setIsTransferDialogOpen(false)
+    } catch (e) {
+      toast.error("Failed to submit transfer.")
+    }
+  }
 
-      addToReorderList(reorderItem)
-    })
-
-    setIsReorderDialogOpen(false)
-    toast({
-      title: "Added to Reorder List",
-      description: `${selectedMedicines.length} medicine${selectedMedicines.length > 1 ? 's' : ''} marked for reorder.`,
-    })
+  const submitReorder = async () => {
+    try {
+      for (const med of selectedMedicines) {
+        await insertReorder({
+          medicine_id: med.id as any,
+          medicine_name: med.name,
+          quantity: med.min_threshold * 2,
+          status: 'pending',
+          reason: 'AI suggested reorder'
+        })
+      }
+      toast.success("Items added to reorder queue in Supabase.")
+      setIsReorderDialogOpen(false)
+    } catch (e) {
+      toast.error("Failed to submit reorder.")
+    }
   }
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[95vw] max-w-[900px] max-h-[85vh] flex flex-col p-0 bg-white dark:bg-slate-900">
-        {/* Fixed Header */}
-        <div className="flex-shrink-0 border-b border-slate-200 dark:border-slate-700 bg-background px-6 py-4">
-          <DialogHeader className="space-y-1">
-            <DialogTitle className="flex items-center gap-2 text-lg">
-              <Bot className="h-5 w-5" />
-              AI Inventory Assistant
-            </DialogTitle>
-            <DialogDescription className="text-sm">
-              Get intelligent insights and ask questions about your medicine inventory
-            </DialogDescription>
-          </DialogHeader>
+      <DialogContent className="max-w-3xl h-[80vh] flex flex-col p-0 overflow-hidden bg-slate-950 border-slate-800 text-white shadow-2xl">
+        <div className="p-6 border-b border-white/10 bg-gradient-to-r from-slate-900 to-slate-950">
+          <DialogTitle className="flex items-center gap-3 text-xl font-black uppercase tracking-tight">
+            <div className="p-2 rounded-lg bg-primary/20 text-primary">
+              <Bot className="h-6 w-6" />
+            </div>
+            AI Supply Assistant
+          </DialogTitle>
+          <DialogDescription className="text-slate-400 font-bold uppercase text-[10px] tracking-widest mt-1">
+            Real-time supply chain intelligence engine
+          </DialogDescription>
         </div>
 
-        {/* Scrollable Body */}
-        <div className="flex-1 overflow-hidden flex flex-col min-h-0">
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {/* Summary Insights */}
-            <Card className="border-0 shadow-none bg-slate-50 dark:bg-slate-800">
-              <CardHeader className="px-0 py-2">
-                <CardTitle className="text-base">Current Inventory Summary</CardTitle>
-              </CardHeader>
-              <CardContent className="px-0 py-2 space-y-2">
-                <div
-                  className="flex items-center gap-3 cursor-pointer hover:bg-red-50 dark:hover:bg-red-900/20 p-3 rounded-lg transition-colors border border-transparent hover:border-red-200 dark:hover:border-red-800"
-                  onClick={() => handleSummaryClick('critical')}
-                >
-                  <AlertTriangle className="h-4 w-4 text-red-500 dark:text-red-400 flex-shrink-0" />
-                  <span className="text-sm flex-1 text-slate-900 dark:text-slate-100">
-                    {criticalMedicines.length} critical medicine{criticalMedicines.length !== 1 ? 's' : ''} (out of stock)
-                  </span>
-                  {criticalMedicines.length > 0 && getStatusBadge("critical")}
+        <div className="flex-1 overflow-hidden flex flex-col bg-slate-950/50">
+          <ScrollArea ref={scrollAreaRef} className="flex-1 p-6">
+            <div className="space-y-6">
+              <div className="flex gap-3">
+                <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center border border-primary/30">
+                  <Bot className="h-4 w-4 text-primary" />
                 </div>
-                <div
-                  className="flex items-center gap-3 cursor-pointer hover:bg-amber-50 dark:hover:bg-amber-900/20 p-3 rounded-lg transition-colors border border-transparent hover:border-amber-200 dark:hover:border-amber-800"
-                  onClick={() => handleSummaryClick('low')}
-                >
-                  <AlertTriangle className="h-4 w-4 text-amber-500 dark:text-amber-400 flex-shrink-0" />
-                  <span className="text-sm flex-1 text-slate-900 dark:text-slate-100">
-                    {lowStockMedicines.length} low stock medicine{lowStockMedicines.length !== 1 ? 's' : ''} (below threshold)
-                  </span>
-                  {lowStockMedicines.length > 0 && getStatusBadge("low")}
-                </div>
-                <div
-                  className="flex items-center gap-3 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20 p-3 rounded-lg transition-colors border border-transparent hover:border-blue-200 dark:hover:border-blue-800"
-                  onClick={() => handleSummaryClick('expiring')}
-                >
-                  <Package className="h-4 w-4 text-blue-500 dark:text-blue-400 flex-shrink-0" />
-                  <span className="text-sm flex-1 text-slate-900 dark:text-slate-100">
-                    {expiringSoon.length} medicine{expiringSoon.length !== 1 ? 's' : ''} expiring within 30 days
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Chat History */}
-            <Card className="border-0 shadow-none bg-slate-50 dark:bg-slate-800">
-              <CardHeader className="px-0 py-2">
-                <CardTitle className="text-base">Ask Me Anything</CardTitle>
-              </CardHeader>
-              <CardContent className="px-0 py-2">
-                <ScrollArea ref={scrollAreaRef} className="h-80 w-full">
-                  <div className="pr-4">
-                    {chatHistory.length === 0 ? (
-                      <p className="text-sm text-muted-foreground text-center py-8">
-                        Ask me about your inventory! Try: "Which medicines are critical?" or "Show me low stock items"
-                      </p>
-                    ) : (
-                      <div className="space-y-4">
-                        {chatHistory.map((chat, index) => (
-                          <div key={index} className="space-y-2">
-                            {/* User Message */}
-                            <div className="flex items-start gap-2 justify-end">
-                              <div className="text-sm bg-primary p-3 rounded-lg max-w-[80%] text-primary-foreground">
-                                {chat.query}
-                              </div>
-                              <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center flex-shrink-0 mt-1">
-                                <span className="text-xs">👤</span>
-                              </div>
-                            </div>
-                            {/* AI Response */}
-                            <div className="flex items-start gap-2">
-                              <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-1">
-                                <Bot className="h-3 w-3" />
-                              </div>
-                              <div className="flex-1">
-                                <div className="text-sm bg-muted p-3 rounded-lg whitespace-pre-line">
-                                  {chat.response}
-                                </div>
-                                {/* Action Buttons */}
-                                {chat.actions && chat.actions.length > 0 && (
-                                  <div className="flex gap-2 mt-2">
-                                    {chat.actions.map((action, actionIndex) => (
-                                      <Button
-                                        key={actionIndex}
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={action.action}
-                                        className="text-xs"
-                                      >
-                                        {action.label === "Create Transfer Request" && <Truck className="h-3 w-3 mr-1" />}
-                                        {action.label === "Mark for Reorder" && <RefreshCw className="h-3 w-3 mr-1" />}
-                                        {action.label === "Export This List" && <FileText className="h-3 w-3 mr-1" />}
-                                        {action.label}
-                                      </Button>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                        {/* Typing Indicator */}
-                        {isTyping && (
-                          <div className="flex items-start gap-2">
-                            <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-1">
-                              <Bot className="h-3 w-3" />
-                            </div>
-                            <div className="text-sm bg-muted p-3 rounded-lg">
-                              <div className="flex items-center gap-1">
-                                <span>AI is analyzing inventory</span>
-                                <div className="flex gap-1">
-                                  <div className="w-1 h-1 bg-current rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                                  <div className="w-1 h-1 bg-current rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                                  <div className="w-1 h-1 bg-current rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
+                <div className="bg-slate-900 border border-white/5 p-4 rounded-2xl rounded-tl-none max-w-[80%] shadow-xl">
+                  <p className="text-sm font-medium leading-relaxed">
+                    Hello! I am your AI assistant. I can help you identify critical shortages or manage inter-facility transfers.
+                    How can I help you today?
+                  </p>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <Button size="sm" variant="outline" className="text-[10px] font-bold uppercase tracking-widest bg-white/5 border-white/10 hover:bg-primary hover:text-white transition-all text-white" onClick={() => handleAction('transfer')}>
+                      <Truck className="mr-2 h-3 w-3" />
+                      Transfer Requests
+                    </Button>
+                    <Button size="sm" variant="outline" className="text-[10px] font-bold uppercase tracking-widest bg-white/5 border-white/10 hover:bg-amber-500 hover:text-white transition-all text-white" onClick={() => handleAction('reorder')}>
+                      <RefreshCw className="mr-2 h-3 w-3" />
+                      Reorder Analysis
+                    </Button>
                   </div>
-                </ScrollArea>
-              </CardContent>
-            </Card>
-          </div>
+                </div>
+              </div>
 
-          {/* Sticky Footer - Chat Input */}
-          <div className="flex-shrink-0 border-t border-slate-200 dark:border-slate-700 bg-background px-4 py-3">
-            <div className="flex gap-2">
+              {chatHistory.map((msg, i) => (
+                <div key={i} className={cn("flex gap-3", msg.type === 'user' ? "flex-row-reverse" : "")}>
+                  <div className={cn("h-8 w-8 rounded-full flex items-center justify-center border",
+                    msg.type === 'user' ? "bg-slate-800 border-white/10" : "bg-primary/20 border-primary/30"
+                  )}>
+                    {msg.type === 'user' ? <span className="text-xs">U</span> : <Bot className="h-4 w-4 text-primary" />}
+                  </div>
+                  <div className={cn("p-4 rounded-2xl max-w-[80%] shadow-xl text-sm font-medium leading-relaxed",
+                    msg.type === 'user' ? "bg-primary text-white rounded-tr-none" : "bg-slate-900 border border-white/5 rounded-tl-none"
+                  )}>
+                    {msg.content}
+                  </div>
+                </div>
+              ))}
+
+              {isTyping && (
+                <div className="flex gap-3 animate-pulse">
+                  <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                  </div>
+                  <div className="p-3 bg-slate-900 border border-white/5 rounded-2xl rounded-tl-none">
+                    <span className="text-[10px] font-bold uppercase tracking-widest opacity-50 text-white">Generating response...</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+
+          <div className="p-6 bg-slate-900/50 border-t border-white/10">
+            <div className="flex gap-3">
               <Input
-                placeholder="Ask about low stock, critical items, expiry..."
+                placeholder="Ask about critical stock, expiry, or transfers..."
                 value={chatInput}
                 onChange={(e) => setChatInput(e.target.value)}
-                onKeyPress={handleKeyPress}
-                className="flex-1 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100"
+                onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+                className="flex-1 bg-slate-950 border-white/10 focus-visible:ring-primary/50 text-white h-12 rounded-xl"
               />
-              <Button onClick={handleSendMessage} disabled={!chatInput.trim()} size="sm">
-                <Send className="h-4 w-4" />
+              <Button onClick={handleSend} className="h-12 w-12 rounded-xl shadow-lg shadow-primary/20">
+                <Send className="h-5 w-5" />
               </Button>
             </div>
           </div>
         </div>
       </DialogContent>
 
-      {/* Transfer Request Dialog */}
       <Dialog open={isTransferDialogOpen} onOpenChange={setIsTransferDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+        <DialogContent className="max-w-xl bg-slate-900 text-white border-slate-800">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Truck className="h-5 w-5" />
-              Create Transfer Request
-            </DialogTitle>
-            <DialogDescription>
-              Request transfer of critical medicines to another facility
-            </DialogDescription>
+            <DialogTitle>AI Transfer Proposal</DialogTitle>
           </DialogHeader>
-
-          <div className="flex-1 overflow-y-auto space-y-4">
-            {/* From/To Facilities */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="from-facility">From Facility</Label>
-                <Input
-                  id="from-facility"
-                  value={transferForm.from}
-                  disabled
-                  className="bg-muted"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="to-facility">To Facility *</Label>
-                <Select
-                  value={transferForm.to}
-                  onValueChange={(value) => setTransferForm({ ...transferForm, to: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select destination" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="City General Hospital">City General Hospital</SelectItem>
-                    <SelectItem value="Regional Medical Center">Regional Medical Center</SelectItem>
-                    <SelectItem value="Downtown Pharmacy">Downtown Pharmacy</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {/* Priority */}
+          <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="priority">Priority</Label>
-              <Select
-                value={transferForm.priority}
-                onValueChange={(value: 'Normal' | 'High' | 'Critical') =>
-                  setTransferForm({ ...transferForm, priority: value })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
+              <Label className="text-xs font-bold uppercase opacity-50">To Facility</Label>
+              <Select value={transferForm.to} onValueChange={(v) => setTransferForm({ ...transferForm, to: v })}>
+                <SelectTrigger className="bg-slate-950 border-white/10 h-11 text-white">
+                  <SelectValue placeholder="Select Destination" />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Normal">Normal</SelectItem>
-                  <SelectItem value="High">High</SelectItem>
-                  <SelectItem value="Critical">Critical</SelectItem>
+                <SelectContent className="bg-slate-900 border-slate-800 text-white">
+                  <SelectItem value="Central Hospital">Central Hospital</SelectItem>
+                  <SelectItem value="Community Clinic A">Community Clinic A</SelectItem>
+                  <SelectItem value="Regional Warehouse">Regional Warehouse</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-
-            {/* Medicine Selection */}
             <div className="space-y-2">
-              <Label>Medicines to Transfer</Label>
-              <div className="border rounded-lg p-4 space-y-3 max-h-60 overflow-y-auto">
-                {selectedMedicines.map((med) => (
-                  <div key={med.id} className="flex items-center justify-between p-3 border rounded">
-                    <div className="flex items-center gap-3">
-                      <Checkbox
-                        checked={true}
-                        disabled
-                        className="pointer-events-none"
-                      />
-                      <div>
-                        <p className="font-medium">{med.name}</p>
-                        <p className="text-sm text-muted-foreground">
-                          Batch: {med.batchNumber} | Current: {med.currentStock} | Threshold: {med.minThreshold}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Label htmlFor={`qty-${med.id}`} className="text-sm">Qty:</Label>
-                      <Input
-                        id={`qty-${med.id}`}
-                        type="number"
-                        min="1"
-                        max={med.currentStock}
-                        value={transferForm.quantities[med.id] || 1}
-                        onChange={(e) => setTransferForm({
-                          ...transferForm,
-                          quantities: {
-                            ...transferForm.quantities,
-                            [med.id]: parseInt(e.target.value) || 1
-                          }
-                        })}
-                        className="w-20"
-                      />
-                    </div>
+              <Label className="text-xs font-bold uppercase opacity-50">Review Proposed Items</Label>
+              <div className="max-h-40 overflow-y-auto space-y-2 pr-2">
+                {selectedMedicines.map(m => (
+                  <div key={m.id} className="flex items-center justify-between p-3 bg-slate-950 rounded-lg border border-white/5">
+                    <span className="text-sm font-bold">{m.name}</span>
+                    <Badge variant="destructive" className="text-[10px] uppercase font-black tracking-tighter">OUT OF STOCK</Badge>
                   </div>
                 ))}
               </div>
             </div>
-
-            {/* Notes */}
-            <div className="space-y-2">
-              <Label htmlFor="notes">Notes (Optional)</Label>
-              <Textarea
-                id="notes"
-                placeholder="Additional notes for the transfer request..."
-                value={transferForm.notes}
-                onChange={(e) => setTransferForm({ ...transferForm, notes: e.target.value })}
-                rows={3}
-              />
-            </div>
+            <Button className="w-full h-11 font-bold uppercase tracking-widest text-xs" onClick={submitTransfer}>
+              Confirm Transfers to Supabase
+            </Button>
           </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsTransferDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleTransferSubmit} disabled={!transferForm.to}>
-              Create Transfer Request
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Reorder Dialog */}
       <Dialog open={isReorderDialogOpen} onOpenChange={setIsReorderDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+        <DialogContent className="max-w-xl bg-slate-900 text-white border-slate-800">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <RefreshCw className="h-5 w-5" />
-              Mark for Reorder
-            </DialogTitle>
-            <DialogDescription>
-              Add low-stock medicines to the reorder list for procurement
-            </DialogDescription>
+            <DialogTitle>AI Reorder Analysis</DialogTitle>
           </DialogHeader>
-
-          <div className="flex-1 overflow-y-auto space-y-4">
-            <div className="space-y-2">
-              <Label>Medicines to Reorder</Label>
-              <div className="border rounded-lg p-4 space-y-3 max-h-60 overflow-y-auto">
-                {selectedMedicines.map((med) => {
-                  const status = getStockStatus(med.currentStock, med.minThreshold)
-                  let reason = "Below threshold"
-                  if (status === "critical") reason = "Out of stock"
-                  else if (new Date(med.expiryDate) < new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)) reason = "Expiring soon"
-
-                  const suggestedQty = Math.max(med.minThreshold * 2 - med.currentStock, 10)
-
-                  return (
-                    <div key={med.id} className="flex items-center justify-between p-3 border rounded">
-                      <div className="flex items-center gap-3">
-                        <Checkbox
-                          checked={true}
-                          disabled
-                          className="pointer-events-none"
-                        />
-                        <div>
-                          <p className="font-medium">{med.name}</p>
-                          <p className="text-sm text-muted-foreground">
-                            Batch: {med.batchNumber} | Current: {med.currentStock} | Suggested: {suggestedQty}
-                          </p>
-                          <p className="text-xs text-amber-600">Reason: {reason}</p>
-                        </div>
-                      </div>
-                      {getStatusBadge(status)}
-                    </div>
-                  )
-                })}
+          <div className="space-y-4 py-4">
+            <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-start gap-4">
+              <AlertTriangle className="h-6 w-6 text-amber-500 flex-shrink-0" />
+              <div>
+                <p className="text-sm font-bold text-amber-500 uppercase tracking-tight">Replenishment Priority</p>
+                <p className="text-xs text-white/70 font-medium">The following items are critically low. Adding to reorder queue will notify the procurement department.</p>
               </div>
             </div>
+            <div className="space-y-2">
+              {selectedMedicines.map(m => (
+                <div key={m.id} className="flex items-center justify-between p-3 bg-slate-950 rounded-lg border border-white/5">
+                  <div>
+                    <p className="text-sm font-bold">{m.name}</p>
+                    <p className="text-[10px] opacity-50 font-bold uppercase tracking-widest">Curr: {m.current_stock} / Threshold: {m.min_threshold}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs font-black text-primary">+{m.min_threshold * 2}</p>
+                    <p className="text-[8px] opacity-50 uppercase font-black">Suggested</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <Button className="w-full h-11 font-bold uppercase tracking-widest text-xs bg-amber-600 hover:bg-amber-700" onClick={submitReorder}>
+              Process Reorder Entries
+            </Button>
           </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsReorderDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleReorderSubmit}>
-              Add to Reorder List
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </Dialog>

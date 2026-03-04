@@ -1,77 +1,112 @@
-import { useState, useEffect } from 'react';
-import {
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  signOut as firebaseSignOut,
-  onAuthStateChanged,
-  User,
-  setPersistence,
-  browserLocalPersistence,
-} from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { useState } from 'react'
+import { createClient } from '@/lib/supabase/client'
 
-export function useAuth() {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+export function useSupabaseAuth() {
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const supabase = createClient()
 
-  useEffect(() => {
-    // Set persistence to local
-    setPersistence(auth, browserLocalPersistence)
-      .then(() => {
-        // Set up auth state listener
-        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-          setUser(currentUser);
-          setLoading(false);
-        });
-
-        return unsubscribe;
-      })
-      .catch((err) => {
-        setError(err.message);
-        setLoading(false);
-      });
-  }, []);
-
-  const signUp = async (email: string, password: string) => {
+  // Email + Password Sign Up
+  const signUp = async (email: string, password: string, metadata?: Record<string, any>) => {
     try {
-      setError(null);
-      const result = await createUserWithEmailAndPassword(auth, email, password);
-      return result.user;
+      setLoading(true)
+      setError(null)
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: metadata, // e.g. { full_name, role, organization_name }
+        },
+      })
+      if (error) throw error
+      return data
     } catch (err: any) {
-      setError(err.message);
-      throw err;
+      setError(err.message)
+      throw err
+    } finally {
+      setLoading(false)
     }
-  };
+  }
 
+  // Email + Password Sign In
   const signIn = async (email: string, password: string) => {
     try {
-      setError(null);
-      const result = await signInWithEmailAndPassword(auth, email, password);
-      return result.user;
+      setLoading(true)
+      setError(null)
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
+      if (error) throw error
+      return data
     } catch (err: any) {
-      setError(err.message);
-      throw err;
+      setError(err.message)
+      throw err
+    } finally {
+      setLoading(false)
     }
-  };
+  }
 
+  // Google OAuth
+  const signInWithGoogle = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      })
+      if (error) throw error
+      return data
+    } catch (err: any) {
+      setError(err.message)
+      throw err
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Password Reset
+  const resetPassword = async (email: string) => {
+    try {
+      setLoading(true)
+      setError(null)
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth/callback?next=/dashboard/settings`,
+      })
+      if (error) throw error
+    } catch (err: any) {
+      setError(err.message)
+      throw err
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Sign Out
   const signOut = async () => {
     try {
-      setError(null);
-      await firebaseSignOut(auth);
+      setLoading(true)
+      setError(null)
+      const { error } = await supabase.auth.signOut()
+      if (error) throw error
     } catch (err: any) {
-      setError(err.message);
-      throw err;
+      setError(err.message)
+      throw err
+    } finally {
+      setLoading(false)
     }
-  };
+  }
 
   return {
-    user,
     loading,
     error,
     signUp,
     signIn,
+    signInWithGoogle,
+    resetPassword,
     signOut,
-    isAuthenticated: !!user,
-  };
+  }
 }

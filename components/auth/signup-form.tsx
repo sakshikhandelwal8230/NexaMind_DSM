@@ -10,14 +10,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Mail, Lock, Eye, EyeOff, Building2, FileText, Upload, UserPlus, Clock, CheckCircle2 } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { useSupabaseAuth } from "@/hooks/useAuth"
+import { useSupabaseStorage } from "@/hooks/useSupabaseStorage"
+import { toast } from "sonner"
 
-type RoleType = "Medical Authority" | "hospital" | "pharmacy"
+type RoleType = "admin" | "hospital" | "pharmacy"
 
 export function SignupForm() {
   const [showPassword, setShowPassword] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
   const [isSubmitted, setIsSubmitted] = useState(false)
   const [agreedToTerms, setAgreedToTerms] = useState(false)
+  const { signUp, loading } = useSupabaseAuth()
+  const { uploadFile } = useSupabaseStorage("documents")
   const [formData, setFormData] = useState({
     role: "" as RoleType | "",
     organizationName: "",
@@ -36,13 +40,31 @@ export function SignupForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setIsLoading(true)
 
-    // Placeholder for registration logic
-    await new Promise((resolve) => setTimeout(resolve, 2000))
+    if (formData.password !== formData.confirmPassword) {
+      toast.error("Passwords do not match")
+      return
+    }
 
-    setIsLoading(false)
-    setIsSubmitted(true)
+    try {
+      // Sign up with Supabase Auth
+      const data = await signUp(formData.email, formData.password, {
+        full_name: formData.organizationName,
+        role: formData.role,
+        organization_name: formData.organizationName,
+        license_number: formData.licenseNumber,
+      })
+
+      // Upload license file if provided
+      if (formData.licenseFile && data.user) {
+        const filePath = `${data.user.id}/license/${formData.licenseFile.name}`
+        await uploadFile(filePath, formData.licenseFile)
+      }
+
+      setIsSubmitted(true)
+    } catch (err: any) {
+      toast.error(err.message || "Failed to create account")
+    }
   }
 
   if (isSubmitted) {
@@ -58,8 +80,8 @@ export function SignupForm() {
               <CheckCircle2 className="h-4 w-4 text-warning" />
               <AlertTitle className="text-warning">Verification Pending</AlertTitle>
               <AlertDescription className="text-warning/80">
-                Your license is under verification. Please wait for approval. This process typically takes 24-48 hours.
-                You will receive an email once your account is activated.
+                Please check your email for a confirmation link to activate your account.
+                Your license is under verification. This process typically takes 24-48 hours.
               </AlertDescription>
             </Alert>
             <p className="mt-6 text-sm text-muted-foreground">
@@ -256,13 +278,13 @@ export function SignupForm() {
             </span>
           </label>
 
-          <Button type="submit" className="w-full gap-2 bg-primary text-primary-foreground" disabled={isLoading || !agreedToTerms}>
-            {isLoading ? (
+          <Button type="submit" className="w-full gap-2 bg-primary text-primary-foreground" disabled={loading || !agreedToTerms}>
+            {loading ? (
               <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
             ) : (
               <UserPlus className="h-4 w-4" />
             )}
-            {isLoading ? "Creating Account..." : "Create Account"}
+            {loading ? "Creating Account..." : "Create Account"}
           </Button>
         </form>
       </CardContent>

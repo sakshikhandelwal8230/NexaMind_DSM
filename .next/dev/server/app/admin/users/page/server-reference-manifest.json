@@ -1,0 +1,50 @@
+{
+  "node": {
+    "7041b84ba7a47b9eb102bab8468bb94f6a6d5e1d9e": {
+      "workers": {
+        "app/admin/users/page": {
+          "moduleId": "[project]/NexaMind_DSM/.next-internal/server/app/admin/users/page/actions.js { ACTIONS_MODULE0 => \"[project]/NexaMind_DSM/lib/admin-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+          "async": false,
+          "exportedName": "updateUserStatus",
+          "filename": "NexaMind_DSM/lib/admin-actions.ts"
+        }
+      },
+      "layer": {
+        "app/admin/users/page": "action-browser"
+      },
+      "exportedName": "updateUserStatus",
+      "filename": "NexaMind_DSM/lib/admin-actions.ts"
+    },
+    "60ecf1d42611f3ce695692b18b59de53d4cbe6284c": {
+      "workers": {
+        "app/admin/users/page": {
+          "moduleId": "[project]/NexaMind_DSM/.next-internal/server/app/admin/users/page/actions.js { ACTIONS_MODULE0 => \"[project]/NexaMind_DSM/lib/admin-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+          "async": false,
+          "exportedName": "promoteUserRole",
+          "filename": "NexaMind_DSM/lib/admin-actions.ts"
+        }
+      },
+      "layer": {
+        "app/admin/users/page": "action-browser"
+      },
+      "exportedName": "promoteUserRole",
+      "filename": "NexaMind_DSM/lib/admin-actions.ts"
+    },
+    "400795a96a8174bb8ac47552c999f18f3dd709026f": {
+      "workers": {
+        "app/admin/users/page": {
+          "moduleId": "[project]/NexaMind_DSM/.next-internal/server/app/admin/users/page/actions.js { ACTIONS_MODULE0 => \"[project]/NexaMind_DSM/lib/admin-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+          "async": false,
+          "exportedName": "softDeleteUser",
+          "filename": "NexaMind_DSM/lib/admin-actions.ts"
+        }
+      },
+      "layer": {
+        "app/admin/users/page": "action-browser"
+      },
+      "exportedName": "softDeleteUser",
+      "filename": "NexaMind_DSM/lib/admin-actions.ts"
+    }
+  },
+  "edge": {}
+}

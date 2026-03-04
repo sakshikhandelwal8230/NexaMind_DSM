@@ -5,96 +5,86 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { ArrowRightLeft, ShoppingCart, Download, Loader2 } from "lucide-react"
-import { addTransferRequest, addToReorderList, downloadCSV } from "@/lib/dms-storage"
 import { toast } from "sonner"
+import { useSupabase } from "@/hooks/useSupabase"
 
 interface ActionCenterProps {
   selectedItems: Array<{
-    id: number
+    id: string
     name: string
-    quantity: number
-    threshold: number
-    status: string
-    facility: string
+    current_stock: number
+    min_threshold: number
+    category: string
   }>
 }
 
 export function ActionCenter({ selectedItems }: ActionCenterProps) {
-  const [isTransferring, setIsTransferring] = useState(false)
-  const [isReordering, setIsReordering] = useState(false)
+  const [loading, setLoading] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
+
+  const { insert: insertTransfer } = useSupabase("transfers")
+  const { insert: insertReorder } = useSupabase("reorders")
 
   const handleTransfer = async () => {
     if (selectedItems.length === 0) return
-
-    setIsTransferring(true)
+    setLoading(true)
     try {
-      // Mock transfer request
-      const transferRequest = {
-        id: `transfer-${Date.now()}`,
-        createdAt: new Date().toISOString(),
-        from: "Central Warehouse",
-        to: selectedItems[0].facility,
-        priority: "High" as const,
-        status: "Requested" as const,
-        items: selectedItems.map(item => ({
-          name: item.name,
-          requestedQty: item.threshold - item.quantity,
-          currentQty: item.quantity,
-          threshold: item.threshold,
-        })),
+      for (const item of selectedItems) {
+        await insertTransfer({
+          medicine_name: item.name,
+          quantity: 50,
+          to_facility: 'Regional Hub',
+          status: 'requested',
+          priority: 'normal'
+        })
       }
-
-      addTransferRequest(transferRequest)
-      toast.success(`Transfer request created for ${selectedItems.length} item(s)`)
+      toast.success(`Transfer protocol initiated for ${selectedItems.length} medical assets.`)
     } catch (error) {
-      toast.error("Failed to create transfer request")
+      toast.error("Failed to transmit transfer requests to Supabase.")
     } finally {
-      setIsTransferring(false)
+      setLoading(false)
     }
   }
 
   const handleReorder = async () => {
     if (selectedItems.length === 0) return
-
-    setIsReordering(true)
+    setLoading(true)
     try {
-      selectedItems.forEach(item => {
-        const reorderItem = {
-          id: `reorder-${item.id}-${Date.now()}`,
-          medicine: item.name,
-          currentStock: item.quantity,
-          threshold: item.threshold,
-          suggestedQty: Math.max(item.threshold * 2 - item.quantity, 100),
-          reason: item.status === "critical" ? "Critical shortage" : "Low stock",
-          createdAt: new Date().toISOString(),
-        }
-        addToReorderList(reorderItem)
-      })
-      toast.success(`Reorder requests created for ${selectedItems.length} item(s)`)
+      for (const item of selectedItems) {
+        await insertReorder({
+          medicine_id: item.id as any,
+          medicine_name: item.name,
+          quantity: item.min_threshold * 3,
+          status: 'pending',
+          reason: 'Bulk action reorder'
+        })
+      }
+      toast.success(`Replenishment cycle started for ${selectedItems.length} items.`)
     } catch (error) {
-      toast.error("Failed to create reorder requests")
+      toast.error("Failed to commit reorder queue to database.")
     } finally {
-      setIsReordering(false)
+      setLoading(false)
     }
   }
 
   const handleExport = async () => {
     if (selectedItems.length === 0) return
-
     setIsExporting(true)
     try {
-      const csvData = selectedItems.map(item => ({
-        Medicine: item.name,
-        Quantity: item.quantity,
-        Threshold: item.threshold,
-        Status: item.status,
-        Facility: item.facility,
-      }))
-      downloadCSV(`inventory-export-${new Date().toISOString().split('T')[0]}.csv`, csvData)
-      toast.success("Inventory data exported successfully")
+      const csvContent = "data:text/csv;charset=utf-8,"
+        + "ID,Name,Stock,Threshold,Category\n"
+        + selectedItems.map(item => `${item.id},${item.name},${item.current_stock},${item.min_threshold},${item.category}`).join("\n")
+
+      const encodedUri = encodeURI(csvContent)
+      const link = document.createElement("a")
+      link.setAttribute("href", encodedUri)
+      link.setAttribute("download", `supply_chain_export_${new Date().toISOString().split('T')[0]}.csv`)
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      toast.success("Operational ledger exported.")
     } catch (error) {
-      toast.error("Failed to export data")
+      toast.error("Export protocol failed.")
     } finally {
       setIsExporting(false)
     }
@@ -103,68 +93,41 @@ export function ActionCenter({ selectedItems }: ActionCenterProps) {
   const hasSelections = selectedItems.length > 0
 
   return (
-    <Card className="border-border bg-card">
+    <Card className="border-border/50 shadow-2xl bg-card/60 backdrop-blur-xl">
       <CardHeader>
-        <CardTitle className="text-lg text-card-foreground flex items-center gap-2">
-          <ArrowRightLeft className="h-5 w-5 text-primary" />
-          Action Center
-        </CardTitle>
-        <CardDescription>Manage selected inventory items</CardDescription>
+        <div className="flex items-center justify-between">
+          <div className="space-y-1">
+            <CardTitle className="text-sm font-black uppercase tracking-widest text-primary flex items-center gap-2">
+              <ArrowRightLeft className="h-4 w-4" />
+              Command Center
+            </CardTitle>
+            <CardDescription className="text-[10px] font-bold uppercase opacity-50">Bulk supply coordination</CardDescription>
+          </div>
+          {hasSelections && <Badge className="bg-primary text-white font-black text-[9px] uppercase px-2 shadow-lg shadow-primary/20">{selectedItems.length} selected</Badge>}
+        </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="pt-2">
         {hasSelections ? (
-          <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <Badge variant="secondary">{selectedItems.length} item(s) selected</Badge>
-            </div>
-            <div className="grid gap-3">
-              <Button
-                onClick={handleTransfer}
-                disabled={isTransferring}
-                className="justify-start gap-2"
-                variant="default"
-              >
-                {isTransferring ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <ArrowRightLeft className="h-4 w-4" />
-                )}
-                Request Transfer
-              </Button>
-              <Button
-                onClick={handleReorder}
-                disabled={isReordering}
-                className="justify-start gap-2"
-                variant="outline"
-              >
-                {isReordering ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <ShoppingCart className="h-4 w-4" />
-                )}
-                Add to Reorder Queue
-              </Button>
-              <Button
-                onClick={handleExport}
-                disabled={isExporting}
-                className="justify-start gap-2"
-                variant="outline"
-              >
-                {isExporting ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Download className="h-4 w-4" />
-                )}
-                Export Selected
-              </Button>
-            </div>
+          <div className="grid gap-3">
+            <Button onClick={handleTransfer} disabled={loading} className="w-full h-11 bg-slate-950 font-black uppercase text-[10px] tracking-widest border border-white/5 shadow-2xl hover:bg-primary transition-all group">
+              {loading ? <Loader2 className="h-3 w-3 animate-spin mr-2" /> : <ArrowRightLeft className="h-3 w-3 mr-2 group-hover:rotate-180 transition-transform duration-500" />}
+              Initiate Cross-Facility Transfer
+            </Button>
+            <Button onClick={handleReorder} disabled={loading} variant="outline" className="w-full h-11 border-border/50 font-black uppercase text-[10px] tracking-widest hover:border-amber-500 hover:text-amber-500 transition-all">
+              {loading ? <Loader2 className="h-3 w-3 animate-spin mr-2" /> : <ShoppingCart className="h-3 w-3 mr-2" />}
+              Primary Reorder Protocol
+            </Button>
+            <Button onClick={handleExport} disabled={isExporting} variant="ghost" className="w-full h-11 text-muted-foreground font-black uppercase text-[10px] tracking-widest">
+              {isExporting ? <Loader2 className="h-3 w-3 animate-spin mr-2" /> : <Download className="h-3 w-3 mr-2" />}
+              Export Surveillance Data (CSV)
+            </Button>
           </div>
         ) : (
-          <div className="text-center py-8">
-            <ArrowRightLeft className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <p className="text-muted-foreground">
-              Select items from the inventory table to perform bulk actions
-            </p>
+          <div className="text-center py-10 opacity-30 select-none grayscale cursor-not-allowed">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted mx-auto mb-4 border border-dashed border-border flex-col">
+              <ArrowRightLeft className="h-5 w-5" />
+            </div>
+            <p className="text-[10px] font-black uppercase tracking-widest px-8">Awaiting cross-table asset selection</p>
           </div>
         )}
       </CardContent>

@@ -1,14 +1,13 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { collection, addDoc, deleteDoc, doc, updateDoc, onSnapshot } from "firebase/firestore"
-import { db } from "@/lib/firebase"
+import { useState, useMemo } from "react"
+import { useSupabase } from "@/hooks/useSupabase"
 import { DashboardSidebar } from "@/components/dashboard/sidebar"
 import { DashboardHeader } from "@/components/dashboard/dashboard-header"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import {
   Dialog,
@@ -20,950 +19,359 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Plus, Pencil, Trash2, Package, AlertTriangle, Save, X } from "lucide-react"
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  Package,
+  AlertTriangle,
+  Save,
+  X,
+  CheckCircle,
+  Bot,
+  Loader2,
+  Filter,
+  ArrowUpDown
+} from "lucide-react"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { toast } from "sonner"
+import { InventoryAIAssistant } from "@/components/dashboard/inventory-ai-assistant"
+import { cn } from "@/lib/utils"
 
 interface Medicine {
   id: string
   name: string
   category: string
-  currentStock: number
-  minThreshold: number
-  expiryDate: string
-  batchNumber: string
+  current_stock: number
+  min_threshold: number
+  expiry_date: string
+  batch_number: string
   manufacturer?: string
 }
 
 export default function InventoryPage() {
-  const [medicines, setMedicines] = useState<Medicine[]>([])
-  const [loading, setLoading] = useState(true)
-  const [open, setOpen] = useState(false)
+  const { data: medicines, loading, insert, update, remove } = useSupabase<Medicine>("medicines")
+
+  const [localSearch, setLocalSearch] = useState("")
+  const [filterCategory, setFilterCategory] = useState("all")
+  const [filterStatus, setFilterStatus] = useState("all")
+  const [isAiDialogOpen, setIsAiDialogOpen] = useState(false)
+  const [isFormOpen, setIsFormOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
+
   const [formData, setFormData] = useState({
     name: "",
-    category: "OTC" as "OTC" | "Prescription",
-    currentStock: "",
-    minThreshold: "",
-    expiryDate: "",
-    batchNumber: "",
+    category: "OTC",
+    current_stock: "",
+    min_threshold: "",
+    expiry_date: "",
+    batch_number: "",
     manufacturer: ""
   })
 
-  // ✨ REAL-TIME SYNC: Listen for changes in Firebase
-  // When Firebase data changes, this component updates automatically
-  useEffect(() => {
-    setLoading(true)
-    const medicinesRef = collection(db, "medicines")
-    
-    // onSnapshot: Creates a real-time listener for the medicines collection
-    // It triggers whenever data is added, updated, or deleted in Firebase
-    const unsubscribe = onSnapshot(
-      medicinesRef,
-      (snapshot) => {
-        const data = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as Medicine[]
-        
-        setMedicines(data)
-        console.log("🔄 Real-time update from Firebase:", data)
-        setLoading(false)
-      },
-      (error) => {
-        console.error("❌ Error setting up real-time listener:", error)
-        setLoading(false)
-      }
-    )
-
-    // Cleanup listener when component unmounts
-    return () => unsubscribe()
-  }, [])
-
-  // Handle Add/Update of medicines
-  const handleAddMedicine = async () => {
-    if (!formData.name || !formData.currentStock || !formData.minThreshold || !formData.expiryDate || !formData.batchNumber) {
-      alert("Please fill in all required fields")
-      return
+  const stats = useMemo(() => {
+    return {
+      total: medicines.length,
+      low: medicines.filter(m => m.current_stock > 0 && m.current_stock <= m.min_threshold).length,
+      critical: medicines.filter(m => m.current_stock === 0).length,
+      available: medicines.filter(m => m.current_stock > m.min_threshold).length
     }
+  }, [medicines])
 
-    try {
-      if (editingId) {
-        // UPDATE: Changes appear instantly in Firebase AND on this page
-        await updateDoc(doc(db, "medicines", editingId), {
-          name: formData.name,
-          category: formData.category,
-          currentStock: parseInt(formData.currentStock),
-          minThreshold: parseInt(formData.minThreshold),
-          expiryDate: formData.expiryDate,
-          batchNumber: formData.batchNumber,
-          manufacturer: formData.manufacturer,
-          updatedAt: new Date()
-        })
-        console.log("✏️ Medicine UPDATED in Firebase - Page updates automatically!")
-        setEditingId(null)
-      } else {
-        // ADD: New medicine saved to Firebase and appears here automatically
-        await addDoc(collection(db, "medicines"), {
-          name: formData.name,
-          category: formData.category,
-          currentStock: parseInt(formData.currentStock),
-          minThreshold: parseInt(formData.minThreshold),
-          expiryDate: formData.expiryDate,
-          batchNumber: formData.batchNumber,
-          manufacturer: formData.manufacturer,
-          createdAt: new Date(),
-          updatedAt: new Date()
-        })
-        console.log("✅ Medicine ADDED to Firebase - Page updates automatically!")
-      }
-      
-      setFormData({ name: "", category: "OTC", currentStock: "", minThreshold: "", expiryDate: "", batchNumber: "", manufacturer: "" })
-      setOpen(false)
-    } catch (error) {
-      console.error("❌ Error saving medicine:", error)
-      alert("Error saving medicine. Please try again.")
-    }
-  }
+  const filteredMedicines = useMemo(() => {
+    return medicines.filter(m => {
+      const matchesSearch = m.name.toLowerCase().includes(localSearch.toLowerCase()) ||
+        m.batch_number.toLowerCase().includes(localSearch.toLowerCase())
+      const matchesCategory = filterCategory === "all" || m.category === filterCategory
+      const status = m.current_stock === 0 ? "critical" : m.current_stock <= m.min_threshold ? "low" : "available"
+      const matchesStatus = filterStatus === "all" || status === filterStatus
 
-  // Edit an existing medicine
-  const handleEditMedicine = (medicine: Medicine) => {
-    setEditingId(medicine.id)
-    setFormData({
-      name: medicine.name || "",
-      category: (medicine.category as "OTC" | "Prescription") || "OTC",
-      currentStock: (medicine.currentStock || 0).toString(),
-      minThreshold: (medicine.minThreshold || 0).toString(),
-      expiryDate: medicine.expiryDate || "",
-      batchNumber: medicine.batchNumber || "",
-      manufacturer: medicine.manufacturer || ""
+      return matchesSearch && matchesCategory && matchesStatus
     })
-    setOpen(true)
+  }, [medicines, localSearch, filterCategory, filterStatus])
+
+  const handleEdit = (med: Medicine) => {
+    setEditingId(med.id)
+    setFormData({
+      name: med.name,
+      category: med.category,
+      current_stock: med.current_stock.toString(),
+      min_threshold: med.min_threshold.toString(),
+      expiry_date: med.expiry_date,
+      batch_number: med.batch_number,
+      manufacturer: med.manufacturer || ""
+    })
+    setIsFormOpen(true)
   }
 
-  // DELETE: Remove medicine from Firebase (updates page automatically)
-  const handleDeleteMedicine = async (id: string) => {
-    if (confirm("Delete this medicine?")) {
+  const handleDelete = async (id: string) => {
+    if (confirm("Permanently delete this medicine item?")) {
       try {
-        await deleteDoc(doc(db, "medicines", id))
-        console.log("🗑️ Medicine DELETED from Firebase - Page updates automatically!")
-      } catch (error) {
-        console.error("❌ Error deleting medicine:", error)
-        alert("Error deleting medicine. Please try again.")
+        await remove(id)
+        toast.success("Medicine deleted from Supabase.")
+      } catch (e) {
+        toast.error("Failed to delete item.")
       }
     }
   }
 
-  const handleCloseDialog = () => {
-    setOpen(false)
-    setEditingId(null)
-    setFormData({ name: "", category: "OTC", currentStock: "", minThreshold: "", expiryDate: "", batchNumber: "", manufacturer: "" })
-  }
+  const handleSubmit = async () => {
+    try {
+      const payload = {
+        name: formData.name,
+        category: formData.category,
+        current_stock: parseInt(formData.current_stock),
+        min_threshold: parseInt(formData.min_threshold),
+        expiry_date: formData.expiry_date,
+        batch_number: formData.batch_number,
+        manufacturer: formData.manufacturer
+      }
 
-  return (
-    <div className="flex h-screen bg-background">
-      <DashboardSidebar />
-      <main className="flex-1 flex flex-col overflow-hidden">
-        <DashboardHeader />
-        <div className="flex-1 overflow-auto">
-          <div className="p-8">
-            <div className="mb-8">
-              <h1 className="text-4xl font-bold text-foreground mb-2">Inventory Management</h1>
-              <p className="text-muted-foreground text-lg">
-                ✨ <span className="font-semibold">Real-time Sync:</span> Add/edit/delete medicines here and they sync to Firebase instantly. Firebase changes appear here automatically!
-              </p>
-            </div>
-
-            {/* KPI Cards - Real-time updates */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                    <Package className="w-4 h-4" />
-                    Total Medicines
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{medicines.length}</div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Low Stock Items</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-orange-600">
-                    {medicines.filter(m => m.currentStock <= m.minThreshold && m.currentStock > 0).length}
-                  </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Out of Stock</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-red-600">
-                    {medicines.filter(m => m.currentStock === 0).length}
-                  </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Total Units</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">
-                    {medicines.reduce((sum, m) => sum + (m.currentStock || 0), 0) || 0}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Add/Edit Medicine Dialog */}
-            <div className="mb-6">
-              <Dialog open={open} onOpenChange={setOpen}>
-                <DialogTrigger asChild>
-                  <Button className="gap-2">
-                    <Plus className="w-4 h-4" />
-                    Add Medicine
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>{editingId ? "Edit Medicine" : "Add New Medicine"}</DialogTitle>
-                    <DialogDescription>
-                      {editingId
-                        ? "Update medicine details. Changes sync to Firebase instantly."
-                        : "Enter medicine details. It will be added to Firebase and appear here immediately."}
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="space-y-4">
-                    <div>
-                      <Label>Medicine Name *</Label>
-                      <Input
-                        value={formData.name}
-                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                        placeholder="e.g., Paracetamol 500mg"
-                      />
-                    </div>
-                    <div>
-                      <Label>Category *</Label>
-                      <select
-                        value={formData.category}
-                        onChange={(e) => setFormData({ ...formData, category: e.target.value as "OTC" | "Prescription" })}
-                        className="w-full px-3 py-2 border rounded-md"
-                      >
-                        <option value="OTC">OTC (Over The Counter)</option>
-                        <option value="Prescription">Prescription Only</option>
-                      </select>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label>Current Stock *</Label>
-                        <Input
-                          type="number"
-                          value={formData.currentStock}
-                          onChange={(e) => setFormData({ ...formData, currentStock: e.target.value })}
-                          placeholder="e.g., 100"
-                        />
-                      </div>
-                      <div>
-                        <Label>Min Threshold *</Label>
-                        <Input
-                          type="number"
-                          value={formData.minThreshold}
-                          onChange={(e) => setFormData({ ...formData, minThreshold: e.target.value })}
-                          placeholder="e.g., 20"
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <Label>Expiry Date *</Label>
-                      <Input
-                        type="date"
-                        value={formData.expiryDate}
-                        onChange={(e) => setFormData({ ...formData, expiryDate: e.target.value })}
-                      />
-                    </div>
-                    <div>
-                      <Label>Batch Number *</Label>
-                      <Input
-                        value={formData.batchNumber}
-                        onChange={(e) => setFormData({ ...formData, batchNumber: e.target.value })}
-                        placeholder="e.g., PCM-2024-001"
-                      />
-                    </div>
-                    <div>
-                      <Label>Manufacturer</Label>
-                      <Input
-                        value={formData.manufacturer}
-                        onChange={(e) => setFormData({ ...formData, manufacturer: e.target.value })}
-                        placeholder="e.g., Generic Pharma"
-                      />
-                    </div>
-                  </div>
-                  <DialogFooter>
-                    <Button variant="outline" onClick={handleCloseDialog}>
-                      <X className="w-4 h-4 mr-2" />
-                      Cancel
-                    </Button>
-                    <Button onClick={handleAddMedicine}>
-                      <Save className="w-4 h-4 mr-2" />
-                      {editingId ? "Update Medicine" : "Add Medicine"}
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-            </div>
-
-            {/* Medicines Table - Updates in real-time */}
-            {loading ? (
-              <Card>
-                <CardContent className="py-8 text-center">
-                  <p className="text-muted-foreground">🔄 Loading medicines from Firebase in real-time...</p>
-                </CardContent>
-              </Card>
-            ) : medicines.length === 0 ? (
-              <Card>
-                <CardContent className="py-8 text-center">
-                  <p className="text-muted-foreground">No medicines found. Add one to get started!</p>
-                </CardContent>
-              </Card>
-            ) : (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Medicines List (Real-time Sync with Firebase)</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Category</TableHead>
-                        <TableHead>Batch</TableHead>
-                        <TableHead className="text-right">Current Stock</TableHead>
-                        <TableHead className="text-right">Min Threshold</TableHead>
-                        <TableHead>Expiry Date</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {medicines.map((medicine) => {
-                        const status = medicine.currentStock === 0 ? "critical" : medicine.currentStock < medicine.minThreshold ? "low" : "available"
-                        return (
-                          <TableRow key={medicine.id}>
-                            <TableCell className="font-medium">{medicine.name}</TableCell>
-                            <TableCell>{medicine.category}</TableCell>
-                            <TableCell>{medicine.batchNumber}</TableCell>
-                            <TableCell className="text-right">{medicine.currentStock}</TableCell>
-                            <TableCell className="text-right">{medicine.minThreshold}</TableCell>
-                            <TableCell>
-                              {typeof medicine.expiryDate === 'string' 
-                                ? medicine.expiryDate 
-                                : new Date(medicine.expiryDate?.seconds * 1000 || 0).toLocaleDateString()}
-                            </TableCell>
-                            <TableCell>
-                              <Badge
-                                variant={
-                                  status === "critical"
-                                    ? "destructive"
-                                    : status === "low"
-                                      ? "secondary"
-                                      : "default"
-                                }
-                              >
-                                {status === "critical"
-                                  ? "Out of Stock"
-                                  : status === "low"
-                                    ? "Low Stock"
-                                    : "Available"}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex gap-2">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleEditMedicine(medicine)}
-                                  title="Edit and sync to Firebase"
-                                >
-                                  <Pencil className="w-4 h-4" />
-                                </Button>
-                                <Button
-                                  variant="destructive"
-                                  size="sm"
-                                  onClick={() => handleDeleteMedicine(medicine.id)}
-                                  title="Delete from Firebase"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </Button>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        )
-                      })}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-        </div>
-      </main>
-    </div>
-  )
-}
-
-const initialMedicines: Medicine[] = [
-  {
-    id: "1",
-    name: "Paracetamol 500mg",
-    category: "OTC",
-    currentStock: 1500,
-    minThreshold: 200,
-    expiryDate: "2027-06-15",
-    batchNumber: "PCM-2024-001",
-  },
-  {
-    id: "2",
-    name: "Amoxicillin 250mg",
-    category: "Prescription",
-    currentStock: 45,
-    minThreshold: 100,
-    expiryDate: "2026-03-20",
-    batchNumber: "AMX-2024-045",
-  },
-  {
-    id: "3",
-    name: "Ibuprofen 400mg",
-    category: "OTC",
-    currentStock: 890,
-    minThreshold: 150,
-    expiryDate: "2027-09-10",
-    batchNumber: "IBU-2024-112",
-  },
-  {
-    id: "4",
-    name: "Metformin 500mg",
-    category: "Prescription",
-    currentStock: 15,
-    minThreshold: 50,
-    expiryDate: "2026-12-01",
-    batchNumber: "MET-2024-089",
-  },
-  {
-    id: "5",
-    name: "Cetirizine 10mg",
-    category: "OTC",
-    currentStock: 320,
-    minThreshold: 100,
-    expiryDate: "2027-04-25",
-    batchNumber: "CET-2024-056",
-  },
-  {
-    id: "6",
-    name: "Omeprazole 20mg",
-    category: "Prescription",
-    currentStock: 0,
-    minThreshold: 75,
-    expiryDate: "2026-08-18",
-    batchNumber: "OMP-2024-033",
-  },
-  {
-    id: "7",
-    name: "Aspirin 100mg",
-    category: "OTC",
-    currentStock: 2200,
-    minThreshold: 300,
-    expiryDate: "2027-11-30",
-    batchNumber: "ASP-2024-078",
-  },
-  {
-    id: "8",
-    name: "Ciprofloxacin 500mg",
-    category: "Prescription",
-    currentStock: 28,
-    minThreshold: 60,
-    expiryDate: "2026-05-12",
-    batchNumber: "CIP-2024-019",
-  },
-]
-
-function getStockStatus(current: number, threshold: number): "available" | "low" | "critical" {
-  if (current === 0) return "critical"
-  if (current < threshold) return "low"
-  return "available"
-}
-
-function getStatusBadge(status: "available" | "low" | "critical") {
-  switch (status) {
-    case "available":
-      return (
-        <Badge className="bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300">
-          <CheckCircle className="mr-1 h-3 w-3" />
-          Available
-        </Badge>
-      )
-    case "low":
-      return (
-        <Badge className="bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300">
-          <AlertTriangle className="mr-1 h-3 w-3" />
-          Low Stock
-        </Badge>
-      )
-    case "critical":
-      return (
-        <Badge className="bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300">
-          <AlertTriangle className="mr-1 h-3 w-3" />
-          Critical
-        </Badge>
-      )
-  }
-}
-
-function InventoryContent() {
-  const [medicines, setMedicines] = useState<Medicine[]>(initialMedicines)
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
-  const [editingMedicine, setEditingMedicine] = useState<Medicine | null>(null)
-  const [filterCategory, setFilterCategory] = useState<string>("all")
-  const [localSearch, setLocalSearch] = useState("")
-  const [filterStatus, setFilterStatus] = useState<string>("all")
-  const [isAiDialogOpen, setIsAiDialogOpen] = useState(false)
-  const [highlightedMedicines, setHighlightedMedicines] = useState<Medicine[]>([])
-
-  const [formData, setFormData] = useState({
-    name: "",
-    category: "OTC" as "OTC" | "Prescription",
-    currentStock: "",
-    minThreshold: "",
-    expiryDate: "",
-    batchNumber: "",
-  })
-
-  const isFormValid =
-    formData.name.trim() !== "" &&
-    formData.currentStock !== "" &&
-    formData.minThreshold !== "" &&
-    formData.expiryDate !== "" &&
-    formData.batchNumber.trim() !== "" &&
-    !isNaN(Number(formData.currentStock)) &&
-    !isNaN(Number(formData.minThreshold)) &&
-    Number(formData.currentStock) >= 0 &&
-    Number(formData.minThreshold) >= 0
-
-  const resetForm = () => {
-    setFormData({
-      name: "",
-      category: "OTC",
-      currentStock: "",
-      minThreshold: "",
-      expiryDate: "",
-      batchNumber: "",
-    })
-  }
-
-  const handleAddMedicine = () => {
-    if (!isFormValid) return
-    const newMedicine: Medicine = {
-      id: Date.now().toString(),
-      name: formData.name,
-      category: formData.category,
-      currentStock: Number.parseInt(formData.currentStock) || 0,
-      minThreshold: Number.parseInt(formData.minThreshold) || 0,
-      expiryDate: formData.expiryDate,
-      batchNumber: formData.batchNumber,
+      if (editingId) {
+        await update(editingId, payload)
+        toast.success("Medicine updated in real-time.")
+      } else {
+        await insert(payload)
+        toast.success("New medicine added to database.")
+      }
+      setIsFormOpen(false)
+      setEditingId(null)
+    } catch (e) {
+      toast.error("Error saving medicine.")
     }
-    setMedicines([...medicines, newMedicine])
-    resetForm()
-    setIsAddDialogOpen(false)
-  }
-
-  const handleEditMedicine = () => {
-    if (!editingMedicine || !isFormValid) return
-    const updatedMedicines = medicines.map((med) =>
-      med.id === editingMedicine.id
-        ? {
-            ...med,
-            name: formData.name,
-            category: formData.category,
-            currentStock: Number.parseInt(formData.currentStock) || 0,
-            minThreshold: Number.parseInt(formData.minThreshold) || 0,
-            expiryDate: formData.expiryDate,
-            batchNumber: formData.batchNumber,
-          }
-        : med,
-    )
-    setMedicines(updatedMedicines)
-    resetForm()
-    setIsEditDialogOpen(false)
-    setEditingMedicine(null)
-  }
-
-  const handleDeleteMedicine = (id: string) => {
-    setMedicines(medicines.filter((med) => med.id !== id))
-  }
-
-  const openEditDialog = (medicine: Medicine) => {
-    setEditingMedicine(medicine)
-    setFormData({
-      name: medicine.name,
-      category: medicine.category,
-      currentStock: medicine.currentStock.toString(),
-      minThreshold: medicine.minThreshold.toString(),
-      expiryDate: medicine.expiryDate,
-      batchNumber: medicine.batchNumber,
-    })
-    setIsEditDialogOpen(true)
-  }
-
-  const filteredMedicines = medicines.filter((med) => {
-    const matchesCategory = filterCategory === "all" || med.category === filterCategory
-    const matchesSearch = med.name.toLowerCase().includes(localSearch.toLowerCase())
-    const status = getStockStatus(med.currentStock, med.minThreshold)
-    const matchesStatus = filterStatus === "all" || status === filterStatus
-    return matchesCategory && matchesSearch && matchesStatus
-  })
-
-  const stats = {
-    total: medicines.length,
-    available: medicines.filter((m) => getStockStatus(m.currentStock, m.minThreshold) === "available").length,
-    low: medicines.filter((m) => getStockStatus(m.currentStock, m.minThreshold) === "low").length,
-    critical: medicines.filter((m) => getStockStatus(m.currentStock, m.minThreshold) === "critical").length,
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
+    <div className="flex h-screen bg-background text-foreground overflow-hidden">
       <DashboardSidebar />
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <DashboardHeader title="My Inventory" subtitle="Manage and view your medicine stock" searchPlaceholder="Search medicines..." searchValue={localSearch} onSearchChange={setLocalSearch} />
-        <main className="flex-1 overflow-y-auto p-6">
-          {/* Summary Cards */}
-          <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <Card className="border-l-4 border-l-primary">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Total Medicines</CardTitle>
-                <Package className="h-5 w-5 text-primary" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold">{stats.total}</div>
-                <p className="text-xs text-muted-foreground">Registered items</p>
-              </CardContent>
-            </Card>
-            <Card className="border-l-4 border-l-emerald-500">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Available</CardTitle>
-                <CheckCircle className="h-5 w-5 text-emerald-500" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-emerald-600">{stats.available}</div>
-                <p className="text-xs text-muted-foreground">Stock above threshold</p>
-              </CardContent>
-            </Card>
-            <Card className="border-l-4 border-l-amber-500">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Low Stock</CardTitle>
-                <AlertTriangle className="h-5 w-5 text-amber-500" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-amber-600">{stats.low}</div>
-                <p className="text-xs text-muted-foreground">Below threshold</p>
-              </CardContent>
-            </Card>
-            <Card className="border-l-4 border-l-red-500">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Critical</CardTitle>
-                <AlertTriangle className="h-5 w-5 text-red-500" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-red-600">{stats.critical}</div>
-                <p className="text-xs text-muted-foreground">Out of stock</p>
-              </CardContent>
-            </Card>
-          </div>
+      <div className="flex-1 flex flex-col overflow-hidden relative">
+        <DashboardHeader
+          title="Global Inventory"
+          subtitle="Real-time pharmaceutical surveillance"
+          searchPlaceholder="Search medicines or batches..."
+          searchValue={localSearch}
+          onSearchChange={setLocalSearch}
+        />
 
-          {/* Filters + Add Button */}
-          <div className="mb-6 flex flex-wrap items-center gap-4">
-            <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="w-[160px]">
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="available">Available</SelectItem>
-                <SelectItem value="low">Low Stock</SelectItem>
-                <SelectItem value="critical">Critical</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={filterCategory} onValueChange={setFilterCategory}>
-              <SelectTrigger className="w-[160px]">
-                <SelectValue placeholder="Filter by category" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                <SelectItem value="OTC">OTC</SelectItem>
-                <SelectItem value="Prescription">Prescription</SelectItem>
-              </SelectContent>
-            </Select>
+        <main className="flex-1 overflow-y-auto p-8 space-y-8 scrollbar-thin scrollbar-thumb-primary/10">
+          {/* Dashboard Header UI */}
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <Button variant="outline" className="h-10 border-primary/20 bg-primary/5 text-primary font-bold uppercase text-[10px] tracking-widest hover:bg-primary hover:text-white transition-all" onClick={() => setIsAiDialogOpen(true)}>
+                <Bot className="mr-2 h-4 w-4" />
+                NexaView AI Analysis
+              </Button>
+              <div className="h-4 w-[1px] bg-border mx-2" />
+              <Select value={filterStatus} onValueChange={setFilterStatus}>
+                <SelectTrigger className="w-[150px] h-10 border-none bg-muted/50 font-bold uppercase text-[10px] tracking-widest">
+                  <Filter className="mr-2 h-3 w-3 opacity-50" />
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Global View</SelectItem>
+                  <SelectItem value="available">Stable Stock</SelectItem>
+                  <SelectItem value="low">Low Warning</SelectItem>
+                  <SelectItem value="critical">Critical Short</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-            <Button onClick={() => setIsAiDialogOpen(true)} variant="outline" className="mr-2">
-              <Bot className="mr-2 h-4 w-4" />
-              AI Assistant
-            </Button>
-            <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+            <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
               <DialogTrigger asChild>
-                <Button onClick={resetForm} className="ml-auto">
+                <Button className="h-10 px-6 font-black uppercase text-[11px] tracking-tighter shadow-lg shadow-primary/20" onClick={() => { setEditingId(null); setFormData({ name: "", category: "OTC", current_stock: "", min_threshold: "", expiry_date: "", batch_number: "", manufacturer: "" }); }}>
                   <Plus className="mr-2 h-4 w-4" />
-                  Add Medicine
+                  Provision New Entry
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-[425px]" onOpenAutoFocus={(e) => e.preventDefault()}>
+              <DialogContent className="max-w-md bg-slate-950 text-white border-white/10 shadow-2xl">
                 <DialogHeader>
-                  <DialogTitle>Add New Medicine</DialogTitle>
-                  <DialogDescription>
-                    Enter the details for the new medicine. All fields are required.
-                  </DialogDescription>
+                  <DialogTitle className="font-black uppercase tracking-tight text-xl">{editingId ? 'Modify Inventory Entry' : 'New Supply Provision'}</DialogTitle>
+                  <DialogDescription className="text-slate-400 font-bold uppercase text-[10px] tracking-widest">Database entry will update instantly across all nodes.</DialogDescription>
                 </DialogHeader>
-                <div className="grid gap-4 py-4">
-                  <FormField
-                    id="name"
-                    label="Medicine Name *"
-                    value={formData.name}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
-                    placeholder="e.g., Paracetamol 500mg"
-                  />
-                  <div className="grid gap-2">
-                    <Label htmlFor="category">Category *</Label>
-                    <Select
-                      value={formData.category}
-                      onValueChange={(value: "OTC" | "Prescription") =>
-                        setFormData((prev) => ({ ...prev, category: value }))
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="OTC">OTC (Over The Counter)</SelectItem>
-                        <SelectItem value="Prescription">Prescription Only</SelectItem>
-                      </SelectContent>
-                    </Select>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-1">
+                    <Label className="text-[10px] font-black uppercase tracking-widest opacity-50">Medicine Name</Label>
+                    <Input className="bg-slate-900 border-white/10 h-11" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      id="stock"
-                      label="Quantity *"
-                      type="number"
-                      value={formData.currentStock}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, currentStock: e.target.value }))}
-                      placeholder="0"
-                    />
-                    <FormField
-                      id="threshold"
-                      label="Min Threshold *"
-                      type="number"
-                      value={formData.minThreshold}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, minThreshold: e.target.value }))}
-                      placeholder="0"
-                    />
-                  </div>
-                  <FormField
-                    id="expiry"
-                    label="Expiry Date *"
-                    type="date"
-                    value={formData.expiryDate}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, expiryDate: e.target.value }))}
-                  />
-                  <FormField
-                    id="batch"
-                    label="Batch Number *"
-                    value={formData.batchNumber}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, batchNumber: e.target.value }))}
-                    placeholder="e.g., PCM-2024-001"
-                  />
-                </div>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
-                    Cancel
-                  </Button>
-                  <Button onClick={handleAddMedicine} disabled={!isFormValid}>
-                    Save Medicine
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-
-            {/* Edit Dialog */}
-            <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-              <DialogContent className="sm:max-w-[425px]" onOpenAutoFocus={(e) => e.preventDefault()}>
-                <DialogHeader>
-                  <DialogTitle>Edit Medicine</DialogTitle>
-                  <DialogDescription>
-                    Update the details for this medicine. All fields are required.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                  <FormField
-                    id="edit-name"
-                    label="Medicine Name *"
-                    value={formData.name}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
-                    placeholder="e.g., Paracetamol 500mg"
-                  />
-                  <div className="grid gap-2">
-                    <Label htmlFor="edit-category">Category *</Label>
-                    <Select
-                      value={formData.category}
-                      onValueChange={(value: "OTC" | "Prescription") =>
-                        setFormData((prev) => ({ ...prev, category: value }))
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="OTC">OTC (Over The Counter)</SelectItem>
-                        <SelectItem value="Prescription">Prescription Only</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <div className="space-y-1">
+                      <Label className="text-[10px] font-black uppercase tracking-widest opacity-50">Category</Label>
+                      <Select value={formData.category} onValueChange={(v) => setFormData({ ...formData, category: v })}>
+                        <SelectTrigger className="bg-slate-900 border-white/10 h-11">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-slate-900 border-white/10 text-white">
+                          <SelectItem value="OTC">OTC</SelectItem>
+                          <SelectItem value="Prescription">Prescription</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[10px] font-black uppercase tracking-widest opacity-50">Batch ID</Label>
+                      <Input className="bg-slate-900 border-white/10 h-11" value={formData.batch_number} onChange={(e) => setFormData({ ...formData, batch_number: e.target.value })} />
+                    </div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      id="edit-stock"
-                      label="Quantity *"
-                      type="number"
-                      value={formData.currentStock}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, currentStock: e.target.value }))}
-                      placeholder="0"
-                    />
-                    <FormField
-                      id="edit-threshold"
-                      label="Min Threshold *"
-                      type="number"
-                      value={formData.minThreshold}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, minThreshold: e.target.value }))}
-                      placeholder="0"
-                    />
+                    <div className="space-y-1">
+                      <Label className="text-[10px] font-black uppercase tracking-widest opacity-50">Current Qty</Label>
+                      <Input type="number" className="bg-slate-900 border-white/10 h-11" value={formData.current_stock} onChange={(e) => setFormData({ ...formData, current_stock: e.target.value })} />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[10px] font-black uppercase tracking-widest opacity-50">Threshold</Label>
+                      <Input type="number" className="bg-slate-900 border-white/10 h-11" value={formData.min_threshold} onChange={(e) => setFormData({ ...formData, min_threshold: e.target.value })} />
+                    </div>
                   </div>
-                  <FormField
-                    id="edit-expiry"
-                    label="Expiry Date *"
-                    type="date"
-                    value={formData.expiryDate}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, expiryDate: e.target.value }))}
-                  />
-                  <FormField
-                    id="edit-batch"
-                    label="Batch Number *"
-                    value={formData.batchNumber}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, batchNumber: e.target.value }))}
-                    placeholder="e.g., PCM-2024-001"
-                  />
+                  <div className="space-y-1">
+                    <Label className="text-[10px] font-black uppercase tracking-widest opacity-50">Expiry Date</Label>
+                    <Input type="date" className="bg-slate-900 border-white/10 h-11" value={formData.expiry_date} onChange={(e) => setFormData({ ...formData, expiry_date: e.target.value })} />
+                  </div>
                 </div>
                 <DialogFooter>
-                  <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
-                    Cancel
-                  </Button>
-                  <Button onClick={handleEditMedicine} disabled={!isFormValid}>
-                    Save Changes
+                  <Button className="w-full h-12 font-black uppercase tracking-widest text-xs" onClick={handleSubmit}>
+                    <Save className="mr-2 h-4 w-4" />
+                    Commit to Supabase Ledger
                   </Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
           </div>
 
-          {/* Inventory Table */}
-          <Card className="bg-white dark:bg-slate-900">
-            <CardHeader className="border-b border-slate-200 dark:border-slate-700 bg-muted/50">
-              <CardTitle className="text-lg text-slate-700 dark:text-slate-200">Medicine Inventory</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                Showing {filteredMedicines.length} of {medicines.length} medicines
-              </p>
-            </CardHeader>
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted/30">
-                    <TableHead className="text-slate-700 dark:text-slate-200">Medicine Name</TableHead>
-                    <TableHead className="text-slate-700 dark:text-slate-200">Category</TableHead>
-                    <TableHead className="text-slate-700 dark:text-slate-200">Batch No.</TableHead>
-                    <TableHead className="text-right text-slate-700 dark:text-slate-200">Current Stock</TableHead>
-                    <TableHead className="text-right text-slate-700 dark:text-slate-200">Min Threshold</TableHead>
-                    <TableHead className="text-slate-700 dark:text-slate-200">Expiry Date</TableHead>
-                    <TableHead className="text-slate-700 dark:text-slate-200">Status</TableHead>
-                    <TableHead className="text-right text-slate-700 dark:text-slate-200">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredMedicines.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={8} className="text-center py-4">
-                        {localSearch ? "No medicines found matching your search." : "No medicines found."}
-                      </TableCell>
+          {/* Stats Section */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <SummaryCard title="Digital Assets" value={stats.total} icon={Package} trend="+2 new" color="primary" />
+            <SummaryCard title="Stable Inventory" value={stats.available} icon={CheckCircle} trend="Satisfactory" color="emerald" />
+            <SummaryCard title="Shortage Warnings" value={stats.low} icon={AlertTriangle} trend="Action Required" color="amber" />
+            <SummaryCard title="Critical Breaches" value={stats.critical} icon={AlertTriangle} trend="Emergency" color="red" />
+          </div>
+
+          {/* Table Container */}
+          <Card className="border-border shadow-2xl overflow-hidden bg-card/50 backdrop-blur-sm">
+            <Table>
+              <TableHeader className="bg-muted/40 border-b">
+                <TableRow>
+                  <TableHead className="font-black h-14 text-[10px] uppercase tracking-widest pl-6">Medicine & ID</TableHead>
+                  <TableHead className="font-black h-14 text-[10px] uppercase tracking-widest">Classification</TableHead>
+                  <TableHead className="font-black h-14 text-[10px] uppercase tracking-widest">Batch Reference</TableHead>
+                  <TableHead className="font-black h-14 text-[10px] uppercase tracking-widest text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      Current Stock
+                      <ArrowUpDown className="h-3 w-3 opacity-30" />
+                    </div>
+                  </TableHead>
+                  <TableHead className="font-black h-14 text-[10px] uppercase tracking-widest">Expiration</TableHead>
+                  <TableHead className="font-black h-14 text-[10px] uppercase tracking-widest">Status</TableHead>
+                  <TableHead className="font-black h-14 text-[10px] uppercase tracking-widest text-right pr-6">Operational Control</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  [...Array(6)].map((_, i) => (
+                    <TableRow key={i} className="animate-pulse">
+                      <TableCell colSpan={7} className="h-16 border-b border-border/10" />
                     </TableRow>
-                  ) : (
-                    filteredMedicines.map((med) => {
-                      const isHighlighted = highlightedMedicines.some(h => h.id === med.id)
-                      const status = getStockStatus(med.currentStock, med.minThreshold)
-                      let highlightClass = "hover:bg-slate-100 dark:hover:bg-slate-800"
-
-                      if (isHighlighted) {
-                        switch (status) {
-                          case "critical":
-                            highlightClass = "border-l-4 border-l-red-500 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30"
-                            break
-                          case "low":
-                            highlightClass = "border-l-4 border-l-amber-500 bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/30"
-                            break
-                          default:
-                            highlightClass = "border-l-4 border-l-yellow-500 bg-yellow-50 dark:bg-yellow-900/20 hover:bg-yellow-100 dark:hover:bg-yellow-900/30"
-                            break
-                        }
-                      }
-
-                      return (
-                        <TableRow key={med.id} className={highlightClass}>
-                          <TableCell className="text-slate-800 dark:text-slate-100 font-bold">{med.name}</TableCell>
-                          <TableCell className="text-slate-800 dark:text-slate-100">{med.category}</TableCell>
-                          <TableCell className="text-slate-800 dark:text-slate-100">{med.batchNumber}</TableCell>
-                          <TableCell className="text-right text-slate-800 dark:text-slate-100">{med.currentStock}</TableCell>
-                          <TableCell className="text-right text-slate-800 dark:text-slate-100">{med.minThreshold}</TableCell>
-                          <TableCell className="text-slate-800 dark:text-slate-100">{med.expiryDate}</TableCell>
-                          <TableCell>{getStatusBadge(status)}</TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex justify-end gap-2">
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                onClick={() => openEditDialog(med)}
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                onClick={() => handleDeleteMedicine(med.id)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      )
-                    })
-                  )}
-                </TableBody>
-              </Table>
-            </CardContent>
+                  ))
+                ) : filteredMedicines.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="h-40 text-center text-muted-foreground italic font-bold">No surveillance data found matching current filters.</TableCell>
+                  </TableRow>
+                ) : (
+                  filteredMedicines.map((med) => {
+                    const status = med.current_stock === 0 ? "critical" : med.current_stock <= med.min_threshold ? "low" : "available"
+                    return (
+                      <TableRow key={med.id} className="group border-b border-border/30 hover:bg-muted/30 transition-all duration-300">
+                        <TableCell className="pl-6 py-5">
+                          <div className="flex flex-col">
+                            <span className="font-black text-sm uppercase tracking-tight text-foreground">{med.name}</span>
+                            <span className="text-[9px] opacity-40 font-mono mt-0.5">DB_UUID: {med.id.slice(0, 12)}...</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="text-[10px] font-black uppercase tracking-widest bg-muted/50 border-border/50 rounded-sm">
+                            {med.category}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="font-mono text-xs opacity-70 tracking-tighter">
+                          {med.batch_number}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex flex-col items-end">
+                            <span className={cn(
+                              "text-lg font-black tracking-tighter",
+                              status === 'critical' ? 'text-red-500' : status === 'low' ? 'text-amber-500' : 'text-primary'
+                            )}>
+                              {med.current_stock}
+                            </span>
+                            <span className="text-[8px] font-bold opacity-30 uppercase tracking-widest">Threshold: {med.min_threshold}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-xs font-bold opacity-70">
+                          {new Date(med.expiry_date).toLocaleDateString(undefined, { month: 'short', year: 'numeric', day: 'numeric' })}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <div className={cn(
+                              "h-2 w-2 rounded-full",
+                              status === 'available' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' :
+                                status === 'low' ? 'bg-amber-500' : 'bg-red-500 animate-pulse'
+                            )} />
+                            <span className={cn(
+                              "text-[10px] font-black uppercase tracking-widest",
+                              status === 'available' ? 'text-emerald-500' :
+                                status === 'low' ? 'text-amber-500' : 'text-red-500'
+                            )}>
+                              {status}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right pr-6">
+                          <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Button size="icon" variant="ghost" className="h-9 w-9 bg-muted/50 text-foreground hover:bg-primary hover:text-white transition-all" onClick={() => handleEdit(med)}>
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button size="icon" variant="ghost" className="h-9 w-9 bg-muted/50 text-red-500 hover:bg-red-500 hover:text-white transition-all" onClick={() => handleDelete(med.id)}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })
+                )}
+              </TableBody>
+            </Table>
           </Card>
         </main>
       </div>
 
       <InventoryAIAssistant
-        medicines={medicines}
         isOpen={isAiDialogOpen}
         onOpenChange={setIsAiDialogOpen}
-        onHighlightMedicines={setHighlightedMedicines}
+        medicines={medicines}
       />
     </div>
+  )
+}
+
+function SummaryCard({ title, value, icon: Icon, trend, color }: any) {
+  const colors: any = {
+    primary: "border-primary text-primary bg-primary/5",
+    emerald: "border-emerald-500 text-emerald-500 bg-emerald-500/5",
+    amber: "border-amber-500 text-amber-500 bg-amber-500/5",
+    red: "border-red-500 text-red-500 bg-red-500/5"
+  }
+
+  return (
+    <Card className={cn("border-l-4 shadow-xl transition-all duration-300 hover:scale-[1.02] flex items-center p-6 gap-6", colors[color])}>
+      <div className={cn("p-4 rounded-xl", color === 'primary' ? 'bg-primary/10' : color === 'emerald' ? 'bg-emerald-500/10' : color === 'amber' ? 'bg-amber-500/10' : 'bg-red-500/10')}>
+        <Icon className="h-8 w-8" />
+      </div>
+      <div className="flex flex-col">
+        <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-60 mb-1">{title}</p>
+        <p className="text-3xl font-black tracking-tighter text-foreground">{value}</p>
+        <div className="flex items-center gap-1.5 mt-1">
+          <span className="text-[9px] font-black uppercase">{trend}</span>
+        </div>
+      </div>
+    </Card>
   )
 }

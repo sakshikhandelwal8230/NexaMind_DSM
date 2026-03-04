@@ -1,0 +1,33 @@
+{
+  "sorted_middleware": [],
+  "middleware": {
+    "/": {
+      "files": [
+        "server/edge/chunks/NexaMind_DSM_0ea86d0b._.js",
+        "server/edge/chunks/8917e_@supabase_auth-js_dist_module_c1521de6._.js",
+        "server/edge/chunks/8917e_37ad5863._.js",
+        "server/edge/chunks/[root-of-the-server]__7eeab8f0._.js",
+        "server/edge/chunks/turbopack-NexaMind_DSM_edge-wrapper_d8cec170.js"
+      ],
+      "name": "middleware",
+      "page": "/",
+      "matchers": [
+        {
+          "regexp": "/:nextData(_next/data/[^/]{1,})?/((?!_next/static|_next/image|favicon.ico|icon.svg|apple-icon.png|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*){(\\\\.json)}?",
+          "originalSource": "/((?!_next/static|_next/image|favicon.ico|icon.svg|apple-icon.png|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)"
+        }
+      ],
+      "wasm": [],
+      "assets": [],
+      "env": {
+        "__NEXT_BUILD_ID": "development",
+        "NEXT_SERVER_ACTIONS_ENCRYPTION_KEY": "cje129MyQnPk13I8f4AfPPcawbCRnDeJiTwHQG50JDc=",
+        "__NEXT_PREVIEW_MODE_ID": "a381047393b80288356e5d736e80652d",
+        "__NEXT_PREVIEW_MODE_ENCRYPTION_KEY": "62577a07c3f4e32882794dd536b383f5cb63e84a9691c394ad5797f41580bdae",
+        "__NEXT_PREVIEW_MODE_SIGNING_KEY": "c87370e1b3b53a49bfe26bf5d6578571738ca337425d260eb9d78a8fd630edce"
+      }
+    }
+  },
+  "instrumentation": null,
+  "functions": {}
+}

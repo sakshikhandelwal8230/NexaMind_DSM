@@ -1,190 +1,177 @@
 "use client"
 
-import { useState, useMemo } from "react"
-import { AlertTriangle, AlertOctagon, Clock, ChevronRight, Check, CheckCircle } from "lucide-react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { useMemo } from "react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-
-type AlertType = "critical" | "warning" | "expiry"
+import { AlertTriangle, AlertOctagon, Info, CheckCircle2, Loader2, Hospital } from "lucide-react"
+import { cn } from "@/lib/utils"
+import { useSupabase } from "@/hooks/useSupabase"
 
 interface AlertItem {
-  id: number
-  type: AlertType
+  id: string
   medicine: string
   facility: string
   message: string
-  time: string
+  type: "critical" | "warning" | "expiry" | "info"
+  status: "active" | "resolved"
+  created_at: string
 }
 
-const initialAlerts: AlertItem[] = [
-  {
-    id: 1,
-    type: "critical",
-    medicine: "Paracetamol 500mg",
-    facility: "City General Hospital",
-    message: "Stock depleted - 0 units remaining",
-    time: "5 min ago",
-  },
-  {
-    id: 2,
-    type: "critical",
-    medicine: "Amoxicillin 250mg",
-    facility: "District Pharmacy #12",
-    message: "Critical shortage - 15 units left",
-    time: "12 min ago",
-  },
-  {
-    id: 3,
-    type: "warning",
-    medicine: "Metformin 500mg",
-    facility: "Central Medical Store",
-    message: "Low stock - 120 units remaining",
-    time: "25 min ago",
-  },
-  {
-    id: 4,
-    type: "expiry",
-    medicine: "Insulin Glargine",
-    facility: "Memorial Hospital",
-    message: "Batch expires in 7 days",
-    time: "1 hour ago",
-  },
-  {
-    id: 5,
-    type: "warning",
-    medicine: "Atorvastatin 10mg",
-    facility: "Health Plus Pharmacy",
-    message: "Below threshold - 85 units",
-    time: "2 hours ago",
-  },
-]
-
-const alertConfig = {
+const typeStyles = {
   critical: {
     icon: AlertOctagon,
     badgeVariant: "destructive" as const,
     label: "Critical",
+    color: "text-red-600",
+    bgColor: "bg-red-50"
   },
   warning: {
     icon: AlertTriangle,
-    badgeVariant: "default" as const,
-    label: "Warning",
+    badgeVariant: "secondary" as const, // We'll use custom class for amber
+    label: "Low Stock",
+    color: "text-amber-600",
+    bgColor: "bg-amber-50"
   },
   expiry: {
-    icon: Clock,
-    badgeVariant: "secondary" as const,
-    label: "Expiring",
+    icon: Info,
+    badgeVariant: "outline" as const,
+    label: "Expiry",
+    color: "text-blue-600",
+    bgColor: "bg-blue-50"
   },
+  info: {
+    icon: Info,
+    badgeVariant: "outline" as const,
+    label: "Update",
+    color: "text-slate-600",
+    bgColor: "bg-slate-50"
+  }
 }
 
 export function AlertsPanel() {
-  const [activeTab, setActiveTab] = useState("all")
-  const [resolvedAlerts, setResolvedAlerts] = useState<Set<number>>(new Set())
+  const { data: alerts, loading, update } = useSupabase<AlertItem>("alerts")
 
-  const activeAlerts = useMemo(() => initialAlerts.filter(alert => !resolvedAlerts.has(alert.id)), [resolvedAlerts])
+  const stats = useMemo(() => {
+    const active = alerts.filter((a: AlertItem) => a.status === 'active')
+    return {
+      total: active.length,
+      critical: active.filter((a: AlertItem) => a.type === "critical").length,
+      low: active.filter((a: AlertItem) => a.type === "warning").length,
+    }
+  }, [alerts])
 
-  const filteredAlerts = useMemo(() => {
-    if (activeTab === "all") return activeAlerts
-    if (activeTab === "critical") return activeAlerts.filter(alert => alert.type === "critical")
-    if (activeTab === "low") return activeAlerts.filter(alert => alert.type === "warning")
-    if (activeTab === "expiring") return activeAlerts.filter(alert => alert.type === "expiry")
-    return activeAlerts
-  }, [activeTab, activeAlerts])
+  const activeAlerts = useMemo(() => {
+    return alerts
+      .filter((a: AlertItem) => a.status === 'active')
+      .sort((a: AlertItem, b: AlertItem) =>
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      )
+      .slice(0, 10)
+  }, [alerts])
 
-  const resolvedAlertsList = useMemo(() =>
-    initialAlerts.filter(alert => resolvedAlerts.has(alert.id)),
-    [resolvedAlerts]
-  )
+  const resolveAlert = async (id: string) => {
+    try {
+      await update(id, { status: 'resolved' })
+    } catch (err) {
+      console.error("Failed to resolve alert:", err)
+    }
+  }
 
-  const handleResolve = (alertId: number) => {
-    setResolvedAlerts(prev => new Set(prev).add(alertId))
+  const getTimeAgo = (timestamp: string) => {
+    const now = new Date()
+    const alertTime = new Date(timestamp)
+    const diffMs = now.getTime() - alertTime.getTime()
+    const diffMins = Math.floor(diffMs / (1000 * 60))
+    const diffHours = Math.floor(diffMins / 60)
+    const diffDays = Math.floor(diffHours / 24)
+
+    if (diffDays > 0) return `${diffDays}d ago`
+    if (diffHours > 0) return `${diffHours}h ago`
+    if (diffMins > 0) return `${diffMins}m ago`
+    return "Just now"
   }
 
   return (
-    <Card className="border-border bg-card">
-      <CardHeader>
-        <CardTitle className="text-lg text-card-foreground">Alerts & Notifications</CardTitle>
-        <CardDescription>Monitor critical issues and take action</CardDescription>
+    <Card className="border-border bg-card shadow-sm overflow-hidden">
+      <CardHeader className="border-b bg-muted/30 pb-3 flex flex-row items-center justify-between space-y-0">
+        <div className="space-y-1">
+          <CardTitle className="text-lg font-bold flex items-center gap-2">
+            <AlertOctagon className="h-5 w-5 text-red-500" />
+            Live Alerts
+          </CardTitle>
+          <p className="text-xs text-muted-foreground font-medium">
+            {stats.total} total active notifications
+          </p>
+        </div>
+        {stats.critical > 0 && (
+          <Badge variant="destructive" className="animate-pulse bg-red-600">
+            {stats.critical} Critical
+          </Badge>
+        )}
       </CardHeader>
-      <CardContent>
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="all">All ({filteredAlerts.length})</TabsTrigger>
-            <TabsTrigger value="critical">Critical ({activeAlerts.filter((a: AlertItem) => a.type === "critical" && !resolvedAlerts.has(a.id)).length})</TabsTrigger>
-            <TabsTrigger value="low">Low ({activeAlerts.filter((a: AlertItem) => a.type === "warning" && !resolvedAlerts.has(a.id)).length})</TabsTrigger>
-            <TabsTrigger value="expiring">Expiring ({activeAlerts.filter((a: AlertItem) => a.type === "expiry" && !resolvedAlerts.has(a.id)).length})</TabsTrigger>
-          </TabsList>
+      <CardContent className="p-0">
+        {loading && (
+          <div className="h-40 flex items-center justify-center">
+            <Loader2 className="h-6 w-6 animate-spin text-primary/30" />
+          </div>
+        )}
 
-          <TabsContent value={activeTab} className="mt-4">
-            <div className="space-y-4">
-              {filteredAlerts.length === 0 ? (
-                <div className="text-center py-8">
-                  <CheckCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-muted-foreground">No active alerts in this category</p>
-                </div>
-              ) : (
-                filteredAlerts.map((alert: AlertItem) => {
-                  const config = alertConfig[alert.type as keyof typeof alertConfig]
-                  const Icon = config.icon
+        {!loading && activeAlerts.length === 0 ? (
+          <div className="p-8 text-center space-y-3">
+            <CheckCircle2 className="h-10 w-10 text-green-500 mx-auto opacity-50" />
+            <p className="text-sm text-muted-foreground font-medium italic">No active alerts. Systems stable.</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-border/50">
+            {activeAlerts.map((alert: AlertItem) => {
+              const styles = typeStyles[alert.type] || typeStyles.info
+              const Icon = styles.icon
 
-                  return (
-                    <div key={alert.id} className="flex items-start gap-4 rounded-lg p-3 bg-muted/50">
-                      <div
-                        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${alert.type === "critical" ? "bg-destructive/20" : alert.type === "warning" ? "bg-warning/20" : "bg-muted"}`}
-                      >
-                        <Icon
-                          className={`h-4 w-4 ${alert.type === "critical" ? "text-destructive" : alert.type === "warning" ? "text-warning" : "text-muted-foreground"}`}
-                        />
+              return (
+                <div key={alert.id} className={cn("p-4 transition-colors hover:bg-muted/30", styles.bgColor + "/30")}>
+                  <div className="flex items-start gap-3">
+                    <div className={cn("p-2 rounded-full", styles.bgColor, styles.color)}>
+                      <Icon className="h-4 w-4" />
+                    </div>
+                    <div className="flex-1 space-y-1">
+                      <div className="flex items-center justify-between">
+                        <Badge variant={styles.badgeVariant} className={cn(
+                          "text-[10px] uppercase font-bold py-0 h-5 border-none",
+                          alert.type === 'warning' ? "bg-amber-500 text-white" : ""
+                        )}>
+                          {styles.label}
+                        </Badge>
+                        <span className="text-[10px] text-muted-foreground font-mono bg-muted px-1.5 py-0.5 rounded">
+                          {getTimeAgo(alert.created_at)}
+                        </span>
                       </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-card-foreground">{alert.medicine}</span>
-                          <Badge variant={config.badgeVariant} className="text-xs">
-                            {config.label}
-                          </Badge>
-                        </div>
-                        <p className="mt-0.5 text-sm text-muted-foreground">{alert.facility}</p>
-                        <p className="mt-1 text-sm text-muted-foreground">{alert.message}</p>
+                      <p className="text-sm font-bold text-foreground">
+                        {alert.medicine}
+                      </p>
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-medium">
+                        <Hospital className="h-3 w-3" />
+                        {alert.facility}
                       </div>
-                      <div className="flex flex-col items-end gap-2">
+                      <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
+                        {alert.message}
+                      </p>
+                      <div className="pt-2">
                         <Button
-                          size="sm"
                           variant="outline"
-                          onClick={() => handleResolve(alert.id)}
-                          className="text-xs"
+                          size="sm"
+                          className="h-7 text-[10px] px-3 font-bold uppercase tracking-wider hover:bg-green-500 hover:text-white transition-all duration-300"
+                          onClick={() => resolveAlert(alert.id)}
                         >
-                          <Check className="h-3 w-3 mr-1" />
-                          Resolve
+                          <CheckCircle2 className="mr-1.5 h-3 w-3" />
+                          Mark Resolved
                         </Button>
-                        <span className="shrink-0 text-xs text-muted-foreground">{alert.time}</span>
                       </div>
                     </div>
-                  )
-                })
-              )}
-            </div>
-          </TabsContent>
-        </Tabs>
-
-        {resolvedAlertsList.length > 0 && (
-          <div className="mt-6">
-            <h4 className="text-sm font-medium text-card-foreground mb-3 flex items-center gap-2">
-              <CheckCircle className="h-4 w-4 text-green-600" />
-              Resolved ({resolvedAlertsList.length})
-            </h4>
-            <div className="space-y-2">
-              {resolvedAlertsList.map((alert) => (
-                <div key={alert.id} className="flex items-center gap-3 rounded-lg p-2 bg-green-50 dark:bg-green-950/20">
-                  <CheckCircle className="h-4 w-4 text-green-600 shrink-0" />
-                  <div className="min-w-0 flex-1">
-                    <span className="text-sm font-medium text-green-800 dark:text-green-200">{alert.medicine}</span>
-                    <span className="text-xs text-green-600 dark:text-green-400 ml-2">{alert.facility}</span>
                   </div>
                 </div>
-              ))}
-            </div>
+              )
+            })}
           </div>
         )}
       </CardContent>

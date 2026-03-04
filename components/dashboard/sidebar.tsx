@@ -29,18 +29,14 @@ export function DashboardSidebar({ isAdmin = false }: SidebarProps) {
   const pathname = usePathname()
   const [isCollapsed, setIsCollapsed] = useState(false)
 
-  // Check if current path is transfers or its sub-sections
-  const isTransfersSection = pathname === "/transfers" || 
-    pathname === "/dashboard/admin/facilities" || 
-    pathname === "/dashboard/admin/users"
+  // Check if current path is transfers
+  const isTransfersSection = pathname === "/transfers"
 
   const adminLinks = [
     { href: "/dashboard/user", label: "Overview", icon: LayoutDashboard },
     { href: "/inventory", label: "Inventory", icon: Package },
     { href: "/alerts", label: "Alerts", icon: AlertTriangle },
-    { href: "/transfers", label: "Transfers", icon: Truck, hasChildren: true },
-    { href: "/dashboard/admin/facilities", label: "Facilities", icon: Building2, isChild: true, parent: "/transfers" },
-    { href: "/dashboard/admin/users", label: "Users", icon: Users, isChild: true, parent: "/transfers" },
+    { href: "/transfers", label: "Transfers", icon: Truck },
     { href: "/security", label: "Security", icon: Shield },
     { href: "/subscription", label: "Subscription", icon: CreditCard },
     { href: "/dashboard/settings", label: "Settings", icon: Settings },

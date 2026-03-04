@@ -77,7 +77,7 @@ export function Footer() {
               </li>
               <li>
                 <Link
-                  href="/dashboard/admin"
+                  href="/admin"
                   className="text-primary-foreground/70 transition-colors hover:text-primary-foreground"
                 >
                   Medical Authority Dashboard
