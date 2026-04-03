@@ -6,5 +6,7 @@
   "/inventory/page": "app/inventory/page.js",
   "/login/page": "app/login/page.js",
   "/page": "app/page.js",
+  "/security/page": "app/security/page.js",
+  "/signup/page": "app/signup/page.js",
   "/transfers/page": "app/transfers/page.js"
 }
